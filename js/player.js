@@ -14,6 +14,9 @@
   const TENANT_LIMIT = 14;
   const TENANT_DAMAGE = 30;
   const MAX_ROCKS = 3;
+  // THE EXPOSURE: appears in the viewfinder after 4s of camera use, lunges at 10s
+  const EXPO = { SHOW: 4, LUNGE: 10, DECAY: 0.6, WASTED: 2.5, LUNGE_DMG: 20, BANISH_DMG: 10 };
+  LO.EXPO = EXPO;
   LO.MAX_ROCKS = MAX_ROCKS;
   // THE SILENT ONE (Phenomenon-249): drawn to complete silence
   const SILENT_WARN = 20, SILENT_ATTACK = 30, SILENT_DAMAGE = 5, SILENT_TICK = 1.0;
@@ -77,6 +80,8 @@
     this.silentTime = 0;
     this.silentTick = 0;
     this.noSilent = false;
+    this.calm = false;
+    this.exposure = 0;
     this.spike = 0;
     this.noiseRadius = 0;
     this.stepPhase = 0;
@@ -155,7 +160,7 @@
       this.stamina = Math.min(100, this.stamina + 18 * dt);
       // THE TENANT: something already lives in every hiding spot.
       // Stay too long and it throws you out.
-      this.hideTime += dt;
+      if (!this.calm) this.hideTime += dt;
       if (this.hideTime >= TENANT_LIMIT) { this.kickOut(); }
       this.panting = Math.max(0, this.panting - dt * 0.5);
     } else {
@@ -251,7 +256,7 @@
 
     // ---------- THE SILENT ONE ----------
     // any sound at all resets it; total silence (including hiding) feeds it
-    if (n > 0 || this.noSilent) { this.silentTime = 0; this.silentTick = 0; }
+    if (n > 0 || this.noSilent || this.calm) { this.silentTime = 0; this.silentTick = 0; }
     else {
       this.silentTime += dt;
       if (this.silentTime >= SILENT_ATTACK) {
@@ -269,11 +274,15 @@
       if (p.taken) return;
       if (Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z) < 1.4) {
         if (p.type === 'rock') {
-          if (this.rocks >= MAX_ROCKS || this.hidden) return;
+          if (this.hidden) return;
+          if (this.rocks >= MAX_ROCKS) {
+            if (!p.fullWarned) { p.fullWarned = true; this.hint && this.hint(`You can only carry ${MAX_ROCKS} rocks.`); }
+            return;
+          }
           p.taken = true; p.mesh.visible = false;
           this.rocks++;
           LO.audio.click(false);
-          this.hint && this.hint(`Rock picked up (${this.rocks}/${MAX_ROCKS}). ${LO.isTouch ? 'Tap THROW' : 'Press G'} to throw it and distract him.`);
+          this.hint && this.hint(`Rock picked up (${this.rocks}/${MAX_ROCKS}). ${LO.isTouch ? 'Tap THROW' : 'Press G'} to throw and distract it.`);
           return;
         }
         p.taken = true; p.mesh.visible = false;
@@ -296,6 +305,18 @@
 
     // ---------- camera zoom & viewfinder ----------
     this.zoom += ((this.cameraUp ? 1 : 0) - this.zoom) * Math.min(1, dt * 8);
+
+    // ---------- THE EXPOSURE ----------
+    // it lives in the lens: the longer the camera is up, the closer it gets
+    if (this.calm) this.exposure = 0;
+    else if (this.zoom > 0.5) this.exposure += dt;
+    else this.exposure = Math.max(0, this.exposure - dt * EXPO.DECAY);
+    if (this.exposure >= EXPO.LUNGE) {
+      this.exposure = 0;
+      this.cameraUp = false;
+      this.onExposure && this.onExposure('lunge');
+      this.damage(EXPO.LUNGE_DMG, 'exposure');
+    }
     this.vfTimer -= dt;
     if (this.cameraUp && this.vfTimer <= 0) { this.vfTimer = 0.12; this.vfTarget = this.findEvidence(); }
     this.burst.intensity *= Math.exp(-dt * 25);
@@ -324,8 +345,10 @@
 
   Player.prototype.collide = function () {
     const p = this.pos;
-    for (const c of this.world.colliders) {
+    const all = this.world.evColliders.length ? this.world.colliders.concat(this.world.evColliders) : this.world.colliders;
+    for (const c of all) {
       if (c.maxY < p.y + 0.3) continue;
+      if (c.minY > p.y + 1.75) continue;   // e.g. the wall above a doorway
       const cx = Math.max(c.minX, Math.min(p.x, c.maxX));
       const cz = Math.max(c.minZ, Math.min(p.z, c.maxZ));
       const dx = p.x - cx, dz = p.z - cz;
@@ -388,7 +411,7 @@
       r.vel.y -= 13 * dt;
       const nx = p.x + r.vel.x * dt, nz = p.z + r.vel.z * dt;
       // hit a wall: drop straight down
-      const hit = W.colliders.some(c => p.y < c.maxY && nx > c.minX && nx < c.maxX && nz > c.minZ && nz < c.maxZ);
+      const hit = W.colliders.concat(W.evColliders).some(c => p.y < c.maxY && p.y > (c.minY || 0) && nx > c.minX && nx < c.maxX && nz > c.minZ && nz < c.maxZ);
       if (hit) { r.vel.x *= -0.15; r.vel.z *= -0.15; } else { p.x = nx; p.z = nz; }
       p.y += r.vel.y * dt;
       r.mesh.rotation.x += r.spin.x * dt; r.mesh.rotation.y += r.spin.y * dt;
@@ -469,7 +492,7 @@
       // line of sight
       this.raycaster.set(cam.position, _dir);
       this.raycaster.far = dist;
-      const hits = this.raycaster.intersectObjects(this.world.occluders, false);
+      const hits = this.raycaster.intersectObjects(this.world.occluders.concat(this.world.evOccluders), false);
       const margin = ev.margin || (ev.id === 'police' ? 3 : ev.id === 'tower' ? 2 : 1.2);
       if (hits.length && hits[0].distance < dist - margin) return;
       const score = 1 - ang / maxAng;
@@ -487,6 +510,16 @@
     this.burst.intensity = 14;
     this.spike = Math.max(this.spike, NOISE.shutter);
     const res = this.findEvidence();
-    this.onPhoto && this.onPhoto(res && res.ok ? res.ev : null);
+    const ev = res && res.ok ? res.ev : null;
+    if (!this.calm && this.exposure >= EXPO.SHOW) {
+      // photographing the Exposure banishes it — but the flash burns you
+      this.exposure = 0;
+      this.onExposure && this.onExposure('banish');
+      this.damage(EXPO.BANISH_DMG, 'exposure');
+    } else if (!ev && !this.calm) {
+      // wasted flashes (using the camera as a light) draw it in faster
+      this.exposure += EXPO.WASTED;
+    }
+    this.onPhoto && this.onPhoto(ev);
   };
 })();

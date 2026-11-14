@@ -98,7 +98,15 @@
     camera.getWorldDirection(_fwd);
     this.maxLit = 0;
     this.nearestLit = null;
+    // they can only be seen in flashlight — with it off, they're simply not there
+    const show = player.flashOn && player.flash.intensity > 0.5 && !player.calm;
+    if (player.calm) {
+      this.moths.forEach(m => { m.g.visible = false; m.lit = 0; });
+      LO.audio.setMothFlutter(0);
+      return;
+    }
     for (const m of this.moths) {
+      m.g.visible = m.active && show;
       if (!m.active) {
         m.cooldown -= dt;
         if (m.cooldown <= 0) this.place(m);   // it settles somewhere else

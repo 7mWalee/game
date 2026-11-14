@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>The Loud One</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Special+Elite&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=10">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@500;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body>
 
@@ -38,10 +38,10 @@
       <button data-action="play">PLAY</button>
       <button data-action="graphics">GRAPHICS</button>
       <button data-action="audio">AUDIO &amp; CONTROLS</button>
-      <button data-action="howto">HOW TO PLAY</button>
+      <button data-action="updates">UPDATE LOG</button>
     </nav>
   </div>
-  <div class="title-footer">v1.9 &nbsp;·&nbsp; stay quiet</div>
+  <div class="title-footer">v2.0 &nbsp;·&nbsp; stay quiet</div>
 </div>
 
 <!-- Graphics options -->
@@ -60,19 +60,7 @@
   <div class="panel">
     <h2>AUDIO &amp; CONTROLS</h2>
     <div class="opt-list" id="audio-list"></div>
-    <div class="panel-buttons">
-      <button data-action="back">BACK</button>
-    </div>
-  </div>
-</div>
-
-<!-- How to play -->
-<div id="howto" class="screen panel-screen">
-  <div class="panel howto">
-    <h2>HOW TO PLAY</h2>
-    <p>Siren Head levelled Hollow Creek. Nobody believes you. Photograph <b>4 pieces of evidence</b> and the police will send in the heavy equipment.</p>
-    <p><b>He is blind. He hunts by sound.</b> Running, jumping, panting and even the buzz of your flashlight can give you away. If he hears you he will come looking. If he gets <b>angry</b> and you keep making noise, he will get you.</p>
-    <p><b>Silence is safety.</b> Stand still with your flashlight off, or hide in a dumpster or locker, and he can't find you.</p>
+    <div class="opt-section">KEYS</div>
     <table class="keys">
       <tr><td>W A S D</td><td>Move</td></tr>
       <tr><td>Mouse</td><td>Look</td></tr>
@@ -82,15 +70,49 @@
       <tr><td>F</td><td>Flashlight (buzzes)</td></tr>
       <tr><td>Right mouse / Q</td><td>Raise camera</td></tr>
       <tr><td>Left mouse</td><td>Take photo (while camera raised)</td></tr>
-      <tr><td>E</td><td>Hide / interact / pick up</td></tr>
-      <tr><td colspan="2" style="color:#d6cfc0">You have <b>100 HP</b> and it never comes back. Don't stay <b>completely silent for too long</b> either — after 20 seconds <b>the Silent One</b> starts to come for you, and at 30 seconds it attacks (5 HP per second) until you make a sound.</td></tr>
-      <tr><td colspan="2" style="color:#d6cfc0">Don't hide too long — <b>the Tenant</b> lives in the hiding spots and will throw you out (loudly), taking <b>30 HP</b>.</td></tr>
-      <tr><td>G</td><td>Throw a rock (distracts him — it lands loudly)</td></tr>
-      <tr><td colspan="2" style="color:#d6cfc0">About once a minute he sends out an <b>echolocation ping</b> that finds you even when you're silent, and he creeps closer. When the <b>wind stops</b>, the whole world goes quiet: that's the Silent One coming.</td></tr>
-      <tr><td colspan="2" style="color:#d6cfc0"><b>Moths</b> stand still in dark corners and alleys. Keep your flashlight on one for 2 seconds and it <b>shrieks</b>: 10 HP, and Siren Head hears it.</td></tr>
-      <tr><td>H</td><td>Hint (unlocks after 3 minutes without finding evidence)</td></tr>
+      <tr><td>E</td><td>Hide / leave hiding spot</td></tr>
+      <tr><td>G</td><td>Throw a rock</td></tr>
+      <tr><td>H</td><td>Hint (after 3 minutes without new evidence)</td></tr>
       <tr><td>Esc</td><td>Pause</td></tr>
     </table>
+    <div class="panel-buttons">
+      <button data-action="back">BACK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update log -->
+<div id="updates" class="screen panel-screen">
+  <div class="panel howto updates">
+    <h2>UPDATE LOG</h2>
+    <div class="upd"><h3>v2.0 <span>current</span></h3><ul>
+      <li>New entity: <b>the Exposure</b>, which lives in your camera's viewfinder</li>
+      <li>Moths can only be seen while your flashlight is on</li>
+      <li>New death screen: a TV plays a tape of how to survive, next to a notebook with a sketch and tips</li>
+      <li>Sheriff's station with a security tape: <b>5 pieces of evidence</b> needed now</li>
+      <li>Every evidence location is randomised each game (except the sheriff's tape)</li>
+      <li>Fixed the invisible wall in building doorways</li>
+      <li>Denser town, even darker nights</li>
+      <li>Rebuilt Siren Head model and animations</li>
+      <li>All entities except Siren Head are disabled while you wait for the police</li>
+      <li>Rock counter removed; on-screen text tells you the limit</li>
+      <li>Update log replaces How to Play; controls moved to Audio &amp; Controls</li>
+    </ul></div>
+    <div class="upd"><h3>v1.9</h3><ul><li>New entity: <b>the Moths</b>. Don't keep your flashlight on them</li></ul></div>
+    <div class="upd"><h3>v1.8</h3><ul>
+      <li>When the wind stops, all sound and on-screen text stops too</li>
+      <li>Siren Head uses echolocation about once a minute</li>
+      <li>Noise sources stack</li>
+      <li>Throwable rocks to distract Siren Head</li>
+    </ul></div>
+    <div class="upd"><h3>v1.7</h3><ul><li>Title screen shows the real version number</li><li>Game files refresh properly after updates</li></ul></div>
+    <div class="upd"><h3>v1.6</h3><ul><li>Wind with gusts and blowing dust that stops after 15 seconds of silence</li></ul></div>
+    <div class="upd"><h3>v1.5</h3><ul><li>Health bar (100 HP, never recovers)</li><li>New entity: <b>the Silent One</b> (Phenomenon-249)</li><li>The Tenant now deals 30 damage</li></ul></div>
+    <div class="upd"><h3>v1.4</h3><ul><li>Siren Head made much harder to avoid</li><li>New entity: <b>the Tenant</b>, which lives in hiding spots</li></ul></div>
+    <div class="upd"><h3>v1.3</h3><ul><li>Hint button after 3 minutes without finding evidence</li><li>Much darker nights; the flashlight matters</li></ul></div>
+    <div class="upd"><h3>v1.2</h3><ul><li>Mobile touch controls</li></ul></div>
+    <div class="upd"><h3>v1.1</h3><ul><li>Fixes from the first playtest</li></ul></div>
+    <div class="upd"><h3>v1.0</h3><ul><li>First release: title screen and graphics options, opening drive, the abandoned town, evidence photography, Siren Head, noise/stamina/flashlight, hiding, the police ending, music and voice lines</li></ul></div>
     <div class="panel-buttons">
       <button data-action="back">BACK</button>
     </div>
@@ -140,10 +162,6 @@
       <div class="bar stamina"><div id="stamina-fill"></div></div>
     </div>
     <div class="bar-row">
-      <label>ROCKS</label>
-      <div id="rocks"><span></span><span></span><span></span></div>
-    </div>
-    <div class="bar-row">
       <label>BATTERY</label>
       <div class="bar battery"><div id="battery-fill"></div></div>
     </div>
@@ -178,6 +196,9 @@
   <div class="vf-rec">● REC</div>
   <div class="vf-info" id="vf-info">NO SUBJECT</div>
   <div class="vf-film" id="vf-film">FILM ∞</div>
+  <div id="exposure">
+    <svg viewBox="0 0 100 220" aria-hidden="true"><ellipse cx="50" cy="34" rx="24" ry="30" fill="#c9c4b8"/><path d="M22 70 C18 110 20 170 26 220 L74 220 C80 170 82 110 78 70 Z" fill="#c9c4b8"/><ellipse cx="40" cy="32" rx="6" ry="9" fill="#111"/><ellipse cx="60" cy="32" rx="6" ry="9" fill="#111"/></svg>
+  </div>
 </div>
 <div id="flash"></div>
 <div id="echo-ring"></div>
@@ -189,6 +210,9 @@
     <ellipse cx="50" cy="30" rx="11" ry="15" fill="#e6e2d8"/>
   </svg>
   <div class="so-text" id="so-text"></div>
+</div>
+<div id="exposure-face">
+  <svg viewBox="0 0 100 140" aria-hidden="true"><ellipse cx="50" cy="60" rx="40" ry="52" fill="#d6d1c5"/><ellipse cx="34" cy="54" rx="10" ry="16" fill="#000"/><ellipse cx="66" cy="54" rx="10" ry="16" fill="#000"/><ellipse cx="50" cy="96" rx="14" ry="9" fill="#000"/></svg>
 </div>
 <div id="tenant-face">
   <svg viewBox="0 0 200 260" aria-hidden="true">
@@ -233,8 +257,6 @@
 <!-- Death -->
 <div id="death" class="screen">
   <div class="death-inner">
-    <h2 id="death-title">YOU WERE TOO LOUD</h2>
-    <p id="death-tip">He only hunts what he can hear.</p>
     <nav class="menu">
       <button data-action="retry">TRY AGAIN</button>
       <button data-action="quit">QUIT TO TITLE</button>
@@ -264,15 +286,16 @@
 <div id="fps"></div>
 
 <script src="js/lib/three.min.js"></script>
-<script src="js/settings.js?v=10"></script>
-<script src="js/audio.js?v=10"></script>
-<script src="js/textures.js?v=10"></script>
-<script src="js/world.js?v=10"></script>
-<script src="js/sirenhead.js?v=10"></script>
-<script src="js/player.js?v=10"></script>
-<script src="js/moths.js?v=10"></script>
-<script src="js/cutscenes.js?v=10"></script>
-<script src="js/main.js?v=10"></script>
-<script src="js/touch.js?v=10"></script>
+<script src="js/settings.js?v=11"></script>
+<script src="js/audio.js?v=11"></script>
+<script src="js/textures.js?v=11"></script>
+<script src="js/world.js?v=11"></script>
+<script src="js/sirenhead.js?v=11"></script>
+<script src="js/player.js?v=11"></script>
+<script src="js/moths.js?v=11"></script>
+<script src="js/deathroom.js?v=11"></script>
+<script src="js/cutscenes.js?v=11"></script>
+<script src="js/main.js?v=11"></script>
+<script src="js/touch.js?v=11"></script>
 </body>
 </html>

@@ -354,6 +354,39 @@
     n.connect(f); f.connect(g2); g2.connect(p); n.start(t); n.stop(t + 1.2);
   };
 
+  // ---------- THE EXPOSURE ----------
+  let expo = null;
+  // a lens-whine and detuned hum that grows as it gets closer in the viewfinder
+  A.setExposure = function (amount) {
+    if (!ctx) return;
+    if (!expo) {
+      const o1 = ctx.createOscillator(); o1.type = 'sine'; o1.frequency.value = 3200;
+      const o2 = ctx.createOscillator(); o2.type = 'sawtooth'; o2.frequency.value = 55;
+      const o3 = ctx.createOscillator(); o3.type = 'sawtooth'; o3.frequency.value = 57.3;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
+      const g1 = ctx.createGain(); g1.gain.value = 0;
+      const g2 = ctx.createGain(); g2.gain.value = 0;
+      o1.connect(g1); g1.connect(sfxBus);
+      o2.connect(f); o3.connect(f); f.connect(g2); g2.connect(sfxBus);
+      o1.start(); o2.start(); o3.start();
+      expo = { g1, g2, o1 };
+    }
+    const t = ctx.currentTime, a = Math.max(0, Math.min(1, amount));
+    expo.g1.gain.setTargetAtTime(a * a * 0.025, t, 0.15);
+    expo.g2.gain.setTargetAtTime(a * 0.22, t, 0.2);
+    expo.o1.frequency.setTargetAtTime(3200 + a * 1800, t, 0.3);
+  };
+  A.exposureLunge = function () {
+    if (!ctx) return;
+    A.staticBurst(null, 1.0, 0.9);
+    A.shutter();
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'square';
+    o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.8);
+    const g = ctx.createGain(); env(g, t, 0.003, 0.5, 0.8, 0.0001);
+    o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 0.9);
+  };
+
   // ---------- echolocation ping (Siren Head) ----------
   A.echoPing = function (voice) {
     if (!ctx) return;

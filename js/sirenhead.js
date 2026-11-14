@@ -49,101 +49,146 @@
   SirenHead.prototype.buildModel = function () {
     const S = LO.settings;
     const simple = S.lighting === 'simple';
-    const Mat = o => simple ? new THREE.MeshLambertMaterial(o) : new THREE.MeshStandardMaterial(Object.assign({ roughness: 0.85 }, o));
+    const Mat = o => simple ? new THREE.MeshLambertMaterial(o) : new THREE.MeshStandardMaterial(Object.assign({ roughness: 0.82 }, o));
     const skinTex = LO.tex.get('skin');
-    const skin = Mat({ map: skinTex, color: 0x9a8a7a });
-    const darkSkin = Mat({ map: skinTex, color: 0x5d5248 });
-    const metal = Mat({ color: 0x4c4c46, metalness: 0.6, roughness: 0.5 });
-    const rust = Mat({ map: LO.tex.get('metal', { color: '#5a4636' }), metalness: 0.5, roughness: 0.6 });
+    const skin = Mat({ map: skinTex, color: 0xa39282 });
+    const darkSkin = Mat({ map: skinTex, color: 0x5a4c42 });
+    const bone = Mat({ map: skinTex, color: 0xc2b29c });
+    const metal = Mat({ color: 0x55554e, metalness: 0.65, roughness: 0.45 });
+    const rust = Mat({ map: LO.tex.get('metal', { color: '#5a4636' }), metalness: 0.5, roughness: 0.65 });
+    const porcelain = Mat({ color: 0xd8d4c8, roughness: 0.3 });
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
     const inside = new THREE.MeshBasicMaterial({ color: 0x050303, side: THREE.BackSide });
     this.mats = { skin, darkSkin, metal };
+    const V2 = THREE.Vector2;
 
-    function limb(r0, r1, len, m) {
-      const g = new THREE.CylinderGeometry(r0, r1, len, 7);
-      g.translate(0, -len / 2, 0);
-      const mesh = new THREE.Mesh(g, m);
-      return mesh;
+    // a tapered, slightly muscled limb from a radius profile [[r, t], ...] (t: 0 = top, 1 = bottom)
+    function lathe(len, prof, m, seg) {
+      const pts = prof.map(([r, t]) => new V2(r, -t * len));
+      return new THREE.Mesh(new THREE.LatheGeometry(pts, seg || 10), m);
     }
+    const knob = (r, m) => new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), m);
     const R = this.root;
-    const hip = new THREE.Group(); hip.position.y = 8.4; R.add(hip);
-    this.hip = hip;
-    // pelvis
-    const pelvis = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.6, 0.7), darkSkin); hip.add(pelvis);
 
+    // ---------------- hips & legs ----------------
+    const hip = new THREE.Group(); hip.position.y = 9.0; R.add(hip); this.hip = hip;
+    const pelvis = lathe(0.9, [[0.05, 0], [0.62, 0.15], [0.7, 0.5], [0.45, 0.85], [0.05, 1]], darkSkin, 12);
+    pelvis.position.y = 0.45; pelvis.scale.z = 0.55; hip.add(pelvis);
     this.legs = [-1, 1].map(side => {
-      const thigh = new THREE.Group(); thigh.position.x = side * 0.65; hip.add(thigh);
-      thigh.add(limb(0.32, 0.2, 4.3, skin));
-      const knee = new THREE.Group(); knee.position.y = -4.3; thigh.add(knee);
-      const kj = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), darkSkin); knee.add(kj);
-      knee.add(limb(0.2, 0.13, 4.0, skin));
-      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.2, 1.4), darkSkin);
-      foot.position.set(0, -4.0, 0.4); knee.add(foot);
-      // long toes
-      for (let i = 0; i < 3; i++) {
-        const toe = limb(0.05, 0.03, 0.8, darkSkin); toe.rotation.x = -1.3;
-        toe.position.set((i - 1) * 0.14, -4.0, 1.05); knee.add(toe);
+      const thigh = new THREE.Group(); thigh.position.set(side * 0.5, 0, 0); hip.add(thigh);
+      thigh.add(knob(0.3, darkSkin));
+      thigh.add(lathe(4.7, [[0.05, 0], [0.32, 0.05], [0.36, 0.25], [0.24, 0.7], [0.19, 0.95], [0.05, 1]], skin));
+      const knee = new THREE.Group(); knee.position.y = -4.7; thigh.add(knee);
+      const kc = knob(0.27, bone); kc.scale.set(1, 1.2, 1.15); kc.position.z = 0.05; knee.add(kc);
+      knee.add(lathe(4.4, [[0.05, 0], [0.22, 0.05], [0.25, 0.2], [0.14, 0.75], [0.11, 0.95], [0.05, 1]], skin));
+      const ankle = new THREE.Group(); ankle.position.y = -4.4; knee.add(ankle);
+      ankle.add(knob(0.16, darkSkin));
+      const foot = lathe(1.5, [[0.05, 0], [0.2, 0.15], [0.17, 0.7], [0.06, 1]], darkSkin, 8);
+      foot.rotation.x = -Math.PI / 2 + 0.05; foot.position.set(0, -0.12, -0.2); ankle.add(foot);
+      for (let i = 0; i < 4; i++) {                                  // long, gripping toes
+        const toe = lathe(0.75, [[0.05, 0], [0.06, 0.2], [0.035, 0.85], [0.005, 1]], darkSkin, 6);
+        toe.rotation.x = -Math.PI / 2 + 0.35; toe.position.set((i - 1.5) * 0.11, -0.15, 1.2);
+        ankle.add(toe);
       }
-      return { thigh, knee, side };
+      return { thigh, knee, ankle, side };
     });
 
-    const torso = new THREE.Group(); hip.add(torso); this.torso = torso;
-    const spineG = new THREE.CylinderGeometry(0.75, 0.45, 3.5, 8); spineG.translate(0, 1.75, 0);
-    const chest = new THREE.Mesh(spineG, skin); chest.scale.z = 0.55; torso.add(chest);
-    // ribs
-    for (let i = 0; i < 5; i++) {
-      const rib = new THREE.Mesh(new THREE.TorusGeometry(0.62 - i * 0.02, 0.05, 4, 10, Math.PI), darkSkin);
-      rib.position.set(0, 1.6 + i * 0.35, 0.05); rib.rotation.y = Math.PI / 2; rib.rotation.z = Math.PI / 2; rib.scale.set(1, 1, 0.7);
-      rib.rotation.x = 0;
-      torso.add(rib);
+    // ---------------- torso ----------------
+    const torso = new THREE.Group(); torso.position.y = 0.6; hip.add(torso); this.torso = torso;
+    const waist = lathe(1.3, [[0.3, 0], [0.26, 0.5], [0.4, 1]], skin, 10);
+    waist.rotation.x = Math.PI; waist.position.y = 1.3; waist.scale.z = 0.7; torso.add(waist);
+    const chest = new THREE.Group(); chest.position.y = 1.25; torso.add(chest); this.chest = chest;
+    const cage = lathe(2.4, [[0.42, 1], [0.72, 0.75], [0.8, 0.45], [0.72, 0.15], [0.45, 0]], skin, 14);
+    cage.position.y = 2.4; cage.scale.z = 0.62; chest.add(cage);
+    for (let i = 0; i < 6; i++) {                                    // ribs pushing through the skin
+      const rr = 0.66 + Math.sin(i / 5 * Math.PI) * 0.12;
+      const rib = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.045, 5, 16, Math.PI * 1.1), bone);
+      rib.rotation.set(Math.PI / 2, 0, -Math.PI * 0.05); rib.scale.set(1, 0.64, 1);
+      rib.position.set(0, 0.45 + i * 0.3, 0.03); chest.add(rib);
     }
-    const shoulders = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.4, 0.6), darkSkin);
-    shoulders.position.y = 3.35; torso.add(shoulders);
+    const sternum = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.5, 0.08), bone); sternum.position.set(0, 1.4, 0.47); chest.add(sternum);
+    for (let i = 0; i < 9; i++) {                                    // spine knuckles down the back
+      const v = knob(0.09, bone); v.position.set(0, -1.1 + i * 0.42, -0.48 + Math.abs(i - 4) * 0.02); chest.add(v);
+    }
+    const clav = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 2.3, 6), bone);
+    clav.rotation.z = Math.PI / 2; clav.position.set(0, 2.38, 0.18); chest.add(clav);
+    [-1, 1].forEach(side => { const sb = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.08), darkSkin); sb.position.set(side * 0.4, 1.8, -0.5); sb.rotation.y = side * 0.4; chest.add(sb); });
 
+    // ---------------- arms: long enough to drag past the knees ----------------
     this.arms = [-1, 1].map(side => {
-      const sh = new THREE.Group(); sh.position.set(side * 1.15, 3.3, 0); torso.add(sh);
-      sh.add(limb(0.2, 0.14, 3.6, skin));
-      const elbow = new THREE.Group(); elbow.position.y = -3.6; sh.add(elbow);
-      elbow.add(new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 5), darkSkin));
-      elbow.add(limb(0.14, 0.1, 3.4, skin));
-      const hand = new THREE.Group(); hand.position.y = -3.4; elbow.add(hand);
-      hand.add(new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.5, 0.15), darkSkin));
-      for (let i = 0; i < 4; i++) {
-        const f = limb(0.04, 0.02, 1.1, darkSkin);
-        f.position.set((i - 1.5) * 0.09, -0.2, 0); f.rotation.x = 0.15 + i * 0.05; f.rotation.z = (i - 1.5) * 0.06;
-        hand.add(f);
+      const sh = new THREE.Group(); sh.position.set(side * 1.12, 2.3, 0); chest.add(sh);
+      sh.add(knob(0.22, darkSkin));
+      sh.add(lathe(3.9, [[0.05, 0], [0.22, 0.05], [0.24, 0.25], [0.15, 0.8], [0.12, 0.95], [0.05, 1]], skin));
+      const elbow = new THREE.Group(); elbow.position.y = -3.9; sh.add(elbow);
+      elbow.add(knob(0.15, bone));
+      elbow.add(lathe(3.7, [[0.05, 0], [0.15, 0.05], [0.17, 0.3], [0.09, 0.92], [0.05, 1]], skin));
+      const wrist = new THREE.Group(); wrist.position.y = -3.7; elbow.add(wrist);
+      const hand = new THREE.Group(); wrist.add(hand);
+      const palm = lathe(0.6, [[0.06, 0], [0.2, 0.2], [0.22, 0.7], [0.16, 1]], darkSkin, 8); palm.scale.z = 0.45; hand.add(palm);
+      const fingers = [];
+      for (let i = 0; i < 4; i++) {                                  // two-jointed, overlong fingers
+        const f1 = new THREE.Group(); f1.position.set((i - 1.5) * 0.11, -0.58, 0); hand.add(f1);
+        f1.add(lathe(0.75, [[0.045, 0], [0.04, 0.9], [0.035, 1]], darkSkin, 6));
+        const f2 = new THREE.Group(); f2.position.y = -0.75; f1.add(f2);
+        f2.add(lathe(0.7, [[0.035, 0], [0.025, 0.85], [0.004, 1]], darkSkin, 6));
+        f1.rotation.z = (i - 1.5) * 0.06;
+        fingers.push({ f1, f2 });
       }
-      return { sh, elbow, hand, side };
+      const th = new THREE.Group(); th.position.set(side * -0.17, -0.25, 0.08); th.rotation.z = side * -0.6; hand.add(th);
+      th.add(lathe(0.55, [[0.04, 0], [0.03, 0.9], [0.005, 1]], darkSkin, 6));
+      return { sh, elbow, wrist, hand, fingers, side };
     });
 
-    // neck = utility pole
-    const neck = new THREE.Group(); neck.position.y = 3.45; torso.add(neck); this.neck = neck;
-    const poleG = new THREE.CylinderGeometry(0.14, 0.2, 3.4, 8); poleG.translate(0, 1.7, 0);
+    // ---------------- neck: a utility pole growing out of the body ----------------
+    const neck = new THREE.Group(); neck.position.y = 2.45; chest.add(neck); this.neck = neck;
+    const stump = lathe(1.2, [[0.2, 1], [0.32, 0.6], [0.5, 0.15], [0.62, 0]], skin, 10);
+    stump.rotation.x = Math.PI; stump.position.y = 1.2; neck.add(stump);
+    for (let i = 0; i < 5; i++) {                                    // sinew wrapping up the pole
+      const sinew = lathe(1.4, [[0.06, 0], [0.05, 0.7], [0.01, 1]], darkSkin, 5);
+      const a = i / 5 * Math.PI * 2;
+      sinew.position.set(Math.cos(a) * 0.2, 1.9, Math.sin(a) * 0.2); sinew.rotation.set(Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12);
+      neck.add(sinew);
+    }
+    const poleG = new THREE.CylinderGeometry(0.13, 0.18, 3.8, 10); poleG.translate(0, 1.9 + 0.7, 0);
     neck.add(new THREE.Mesh(poleG, rust));
-    // flesh wrapping the bottom of the pole
-    const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.35, 1.0, 8), skin); wrap.position.y = 0.4; neck.add(wrap);
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.12), rust); cross.position.y = 3.6; neck.add(cross);
+    [-0.6, -0.2, 0.2, 0.6].forEach(x => { const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.2, 8), porcelain); ins.position.set(x, 3.76, 0); neck.add(ins); });
 
-    const head = new THREE.Group(); head.position.y = 3.4; neck.add(head); this.head = head;
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.16, 0.16), metal); head.add(bar);
+    // ---------------- head: two civil-defence sirens ----------------
+    const head = new THREE.Group(); head.position.y = 4.45; neck.add(head); this.head = head;
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.14, 0.3), metal); head.add(bracket);
+    const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.5, 10), metal); mount.position.y = -0.25; head.add(mount);
     this.mouths = [];
+    const hornProfile = [[0.26, 0], [0.3, 0.25], [0.42, 0.55], [0.62, 0.78], [0.95, 0.94], [1.08, 1]];
     [-1, 1].forEach(side => {
       const s = new THREE.Group();
-      s.position.set(side * 0.75, 0.25, 0);
-      s.rotation.y = side * 0.75; // both horns point forward-ish and outward
-      const hornG = new THREE.CylinderGeometry(0.95, 0.28, 2.0, 18, 1, true);
-      hornG.rotateX(Math.PI / 2); hornG.translate(0, 0, 1.0);
-      const horn = new THREE.Mesh(hornG, metal); s.add(horn);
-      const innerG = hornG.clone();
-      const innerM = new THREE.Mesh(innerG, inside); innerM.scale.set(0.97, 0.97, 1); s.add(innerM);
-      const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 12), rust);
+      s.position.set(side * 0.68, 0.32, 0.05);
+      s.rotation.y = side * 0.72;
+      const pts = hornProfile.map(([r, t]) => new V2(r, t * 2.2));
+      const hornG = new THREE.LatheGeometry(pts, 20); hornG.rotateX(Math.PI / 2);
+      s.add(new THREE.Mesh(hornG, metal));
+      const innerM = new THREE.Mesh(hornG.clone(), inside); innerM.scale.set(0.96, 0.96, 1); s.add(innerM);
+      [0.5, 1.1, 1.7].forEach((z, i) => {                            // stiffening rings
+        const rr = [0.33, 0.47, 0.78][i];
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(rr, 0.035, 5, 18), rust); ring.position.z = z; s.add(ring);
+      });
+      const lip = new THREE.Mesh(new THREE.TorusGeometry(1.08, 0.07, 6, 24), metal); lip.position.z = 2.2; s.add(lip);
+      const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.8, 14), rust);
       housing.rotation.x = Math.PI / 2; housing.position.z = -0.3; s.add(housing);
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.06, 6, 20), metal); rim.position.z = 2.0; s.add(rim);
-      const mouth = new THREE.Mesh(new THREE.CircleGeometry(0.85, 18), new THREE.MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-      mouth.position.z = 0.6; s.add(mouth);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), rust);
+      cap.rotation.x = -Math.PI / 2; cap.position.z = -0.7; s.add(cap);
+      const mouth = new THREE.Mesh(new THREE.CircleGeometry(0.95, 20), new THREE.MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      mouth.position.z = 0.7; s.add(mouth);
       this.mouths.push(mouth);
       head.add(s);
     });
+    // sagging cables from the cross-arm
+    [[-0.6, -1.2], [0.6, 1.3], [-0.2, -0.5]].forEach(([x0, x1]) => {
+      const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(x0, 3.8, 0), new THREE.Vector3((x0 + x1) / 2, 2.4, 0.3), new THREE.Vector3(x1, 1.3, 0.2)]);
+      neck.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.025, 4), wireMat));
+    });
     this.headGlow = new THREE.PointLight(0xff2a10, 0, 30, 2);
-    this.headGlow.position.set(0, 0.3, 2); head.add(this.headGlow);
+    this.headGlow.position.set(0, 0.3, 2.2); head.add(this.headGlow);
 
     if (S.shadows !== 'off') R.traverse(o => { if (o.isMesh) o.castShadow = true; });
   };
@@ -396,44 +441,70 @@
   SirenHead.prototype.animate = function (dt) {
     const v = this.speedNow || 0;
     this.root.rotation.y = this.yaw;
-    this.phase += dt * (0.6 + v * 0.38);
+    this.animT = (this.animT || 0) + dt;
+    const T = this.animT;
+    this.phase += dt * (0.5 + v * 0.34);
     const ph = this.phase;
     const amp = Math.min(1, v / 3.5);
+    const hunt = this.state === 'hunt' ? 1 : 0;
+    this.huntK = (this.huntK || 0) + (hunt - (this.huntK || 0)) * Math.min(1, dt * 2);
+    const H = this.huntK;
+
+    // ---- legs: long, heavy strides; knees fold during the swing, feet stay flat-ish
     this.legs.forEach(L => {
-      const s = Math.sin(ph + (L.side > 0 ? Math.PI : 0));
-      L.thigh.rotation.x = -s * 0.45 * amp;
-      L.knee.rotation.x = Math.max(0, Math.cos(ph + (L.side > 0 ? Math.PI : 0))) * 0.8 * amp;
+      const p = ph + (L.side > 0 ? Math.PI : 0);
+      L.thigh.rotation.x = -Math.sin(p) * 0.55 * amp - 0.06;
+      L.knee.rotation.x = 0.1 + (0.15 + Math.max(0, -Math.cos(p)) * 0.95) * amp;
+      L.ankle.rotation.x = -(L.thigh.rotation.x + L.knee.rotation.x) * 0.75;
+      L.thigh.rotation.z = L.side * 0.04;
     });
-    // footstep sound when a stride lands
+    // footstep when a stride lands
     const sgn = Math.sign(Math.sin(ph));
     if (amp > 0.1 && sgn !== this.lastStepSign) {
       this.lastStepSign = sgn;
-      const footX = this.pos.x + Math.cos(this.yaw) * sgn * 0.7, footZ = this.pos.z - Math.sin(this.yaw) * sgn * 0.7;
+      const footX = this.pos.x + Math.cos(this.yaw) * sgn * 0.6, footZ = this.pos.z - Math.sin(this.yaw) * sgn * 0.6;
       LO.audio.giantStep({ x: footX, y: 0, z: footZ }, 0.5 + amp * 0.6);
       this.onStep && this.onStep(this.pos);
     }
-    this.hip.position.y = 8.4 - Math.abs(Math.cos(ph)) * 0.35 * amp;
+    // ---- hips: drop on each step and sway side to side
+    this.hip.position.y = 9.0 - Math.abs(Math.cos(ph)) * 0.42 * amp;
+    this.hip.rotation.z = Math.sin(ph) * 0.06 * amp;
+    this.hip.rotation.y = Math.sin(ph) * 0.1 * amp;
 
-    // posture
+    // ---- posture
     const searching = this.state === 'search' || (this.state === 'investigate' && this.reached);
-    const targetLean = this.forceLean !== undefined ? this.forceLean : (searching ? 0.55 : this.state === 'hunt' ? 0.3 : 0.12);
+    const targetLean = this.forceLean !== undefined ? this.forceLean : (searching ? 0.5 : 0.14 + H * 0.22);
     this.lean += (targetLean - this.lean) * Math.min(1, dt * 1.5);
     this.torso.rotation.x = this.lean;
+    this.torso.rotation.y = -Math.sin(ph) * 0.13 * amp;            // shoulders counter-swing the hips
+    this.torso.rotation.z = -Math.sin(ph) * 0.04 * amp;
+    const breathe = Math.sin(T * 1.2) * 0.025;
+    this.chest.scale.set(1 + breathe, 1 + breathe * 0.4, 1 + breathe);
+
+    // ---- arms: dangle and swing with a lagging elbow; reach forward when hunting
     this.arms.forEach(A => {
-      const s = Math.sin(ph + (A.side > 0 ? 0 : Math.PI));
-      A.sh.rotation.x = s * 0.3 * amp - this.lean * 0.9 + (this.armRaise || 0);
-      A.sh.rotation.z = A.side * (0.06 + (this.state === 'hunt' ? 0.25 : 0));
-      A.elbow.rotation.x = -0.25 - Math.max(0, s) * 0.3 * amp - (this.state === 'hunt' ? 0.4 : 0);
+      const p = ph + (A.side > 0 ? 0 : Math.PI);
+      A.sh.rotation.x = Math.sin(p) * 0.34 * amp - this.lean * 0.85 + (this.armRaise || 0) - H * 0.35;
+      A.sh.rotation.z = A.side * (0.07 + H * 0.18) + Math.sin(T * 0.7 + A.side) * 0.015;
+      A.elbow.rotation.x = -(0.25 + Math.max(0, Math.sin(p - 0.7)) * 0.4 * amp) - H * 0.45;
+      A.wrist.rotation.x = Math.sin(p - 1.3) * 0.25 * amp - 0.1;
+      const curl = 0.25 + H * 0.55 + Math.max(0, Math.sin(T * 5 + A.side * 2)) * 0.06;
+      A.fingers.forEach((f, i) => { f.f1.rotation.x = curl + i * 0.03; f.f2.rotation.x = curl * 1.3; });
     });
-    // head: sways; listens by turning toward sounds while searching
+
+    // ---- head: delayed bob, listening turns, and the odd twitch
     this.headTurnT = (this.headTurnT || 0) + dt;
     const look = searching ? Math.sin(this.headTurnT * 0.7) * 0.9 : Math.sin(this.headTurnT * 0.3) * 0.2;
     this.headTurn += (look - this.headTurn) * Math.min(1, dt * 2);
-    this.neck.rotation.y = this.headTurn;
-    this.neck.rotation.z = Math.sin(this.headTurnT * 0.9) * 0.05;
-    this.neck.rotation.x = -this.lean * 0.4 + (this.neckDip || 0);
+    this.twitchT = (this.twitchT || 3) - dt;
+    if (this.twitchT <= 0) { this.twitch = (Math.random() - 0.5) * 0.5; this.twitchT = 2 + Math.random() * 6; }
+    this.twitch = (this.twitch || 0) * Math.exp(-dt * 6);
+    this.neck.rotation.y = this.headTurn + this.twitch;
+    this.neck.rotation.z = Math.sin(this.headTurnT * 0.9) * 0.05 + this.twitch * 0.4;
+    this.neck.rotation.x = -this.lean * 0.45 + (this.neckDip || 0) + Math.sin(ph * 2 - 0.8) * 0.04 * amp;
+    this.head.rotation.z = Math.sin(T * 0.5) * 0.03;
 
-    // horn glow by anger
+    // ---- horn glow by anger
     const g = this.glowOverride !== undefined ? this.glowOverride : this.anger / 100;
     this.glow += (g - this.glow) * Math.min(1, dt * 3);
     const flick = this.state === 'hunt' ? 0.75 + Math.random() * 0.25 : 1;

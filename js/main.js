@@ -5,9 +5,9 @@
   const S = LO.settings;
   const A = LO.audio;
   const $ = id => document.getElementById(id);
-  const EVIDENCE_NEEDED = 4;
+  const EVIDENCE_NEEDED = 5;
 
-  let renderer, scene, camera, world, siren, player, moths;
+  let renderer, scene, camera, world, siren, player, moths, deathRoom, deathShown = false;
   let state = 'gate';          // gate | title | opening | play | paused | dying | dead | ending | credits
   let cutscene = null, cutCtx = null;
   let menuReturn = 'title';    // which screen an options panel goes back to
@@ -103,7 +103,7 @@
     if (siren) siren.dispose();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x05070a);
-    scene.fog = new THREE.FogExp2(0x020305, 0.022);
+    scene.fog = new THREE.FogExp2(0x010102, 0.022);
     if (!camera) camera = new THREE.PerspectiveCamera(S.fov, window.innerWidth / window.innerHeight, 0.1, 1100);
     camera.children.slice().forEach(c => camera.remove(c));
     world = LO.World.build(scene);
@@ -130,6 +130,17 @@
       if (cause === 'silent') A.silentHit();
     };
     player.onDeath = cause => dieBy(cause);
+    player.onExposure = kind => {
+      const f = $('exposure-face');
+      if (kind === 'lunge') {
+        A.exposureLunge();
+        f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+        showHint('THE EXPOSURE lunged out of the lens. Don\'t keep your camera up so long.', 6000);
+      } else {
+        A.staticBurst(null, 0.8, 0.4);
+        showHint('The flash banished it... and burned you.', 4500);
+      }
+    };
     player.onRockLand = pos => {
       if (state !== 'play') return;
       if (siren.hearNoise(pos, 45)) hintOnce('rockworked', 'He heard the rock. Move while he checks it out.', 5000);
@@ -325,7 +336,7 @@
   // ============================================================
   function resetRun() {
     if (worldDirty) buildWorld();
-    world.evidence.forEach(e => { e.found = false; });
+    world.placeEvidence();          // every game the evidence moves (except the sheriff's tape)
     world.pickups.forEach(p => { p.taken = false; p.mesh.visible = true; });
     evidenceCount = 0; endingQueued = false;
     siren.scripted = false;
@@ -422,7 +433,7 @@
     player.enabled = false;
     show('pause');
     if (window.speechSynthesis) try { speechSynthesis.pause(); } catch (e) {}
-    A.setFlashlightBuzz(false); A.setBreathing(0); A.setTenant(0); A.setSilentOne(0); A.setMothFlutter(0);
+    A.setFlashlightBuzz(false); A.setBreathing(0); A.setTenant(0); A.setSilentOne(0); A.setMothFlutter(0); A.setExposure(0);
   }
   function resume() {
     hideAllScreens();
@@ -470,11 +481,11 @@
 
   function queueEnding() {
     endingQueued = true;
-    // he calms down so the call can be made in peace
-    siren.anger = 0;
-    siren.setState('wander');
-    siren.catchDisabled = true;
+    // every entity except Siren Head is switched off while you wait for the police
+    player.calm = true;
     player.noSilent = true;
+    player.exposure = 0;
+    A.setTenant(0); A.setSilentOne(0); A.setMothFlutter(0); A.setExposure(0); A.setExposure(0);
     setTimeout(async () => {
       await A.say('player', 'That\'s enough. Sending everything to the county sheriff now.');
       await A.say('radio', 'Hollow Creek caller, we... received your photos. Stay where you are. All units, heavy response to Hollow Creek. This is not a drill.');
@@ -548,7 +559,7 @@
     A.setTenant(0);
     if (document.pointerLockElement) document.exitPointerLock();
     A.playMusic(null, 0.5);
-    if (cause === 'silent') { A.silentHit(); A.setSilentOne(1); } else if (cause === 'tenant') A.tenantScream();
+    if (cause === 'silent') { A.silentHit(); A.setSilentOne(1); } else if (cause === 'tenant') A.tenantScream(); else if (cause === 'exposure') A.exposureLunge();
     A.setMothFlutter(0);
     $('damage').style.transition = 'opacity 0.3s'; $('damage').style.opacity = 1;
   }
@@ -596,7 +607,8 @@
     {
       if (state !== 'dying') return;
       state = 'dead';
-      A.setSilentOne(0);
+      deathShown = false;
+      A.setSilentOne(0); A.setExposure(0); A.setMothFlutter(0); A.setTenant(0);
       A.setStillness(false); document.body.classList.remove('still');
       $('silent-one').style.opacity = 0;
       ui.fadeOut(0.3);
@@ -604,10 +616,11 @@
         hideAllScreens();
         show('death');
         $('damage').style.opacity = 0;
-        const D = DEATHS[dieCause] || DEATHS.siren;
-        $('death-title').textContent = D.title;
-        const tips = D.tips;
-        $('death-tip').textContent = tips[(Math.random() * tips.length) | 0];
+        deathRoom.show(dieCause);
+        deathShown = true;
+        A.playMusic(null, 0.3);
+        A.staticBurst(null, 1.6, 0.18);
+        ui.fadeIn(1.2);
       }, 400);
     }
   }
@@ -668,9 +681,20 @@
       A.setTenant(Math.max(0, (tf - 0.3) / 0.7));
     } else A.setTenant(0);
 
-    // rocks
-    const rs = $('rocks').children;
-    for (let i = 0; i < rs.length; i++) rs[i].classList.toggle('have', i < player.rocks);
+    // the Exposure, seen only through the viewfinder
+    const ex = $('exposure');
+    const ek = Math.max(0, Math.min(1, (player.exposure - LO.EXPO.SHOW) / (LO.EXPO.LUNGE - LO.EXPO.SHOW)));
+    if (player.zoom > 0.5 && player.exposure >= LO.EXPO.SHOW - 0.5) {
+      ex.style.opacity = 0.25 + ek * 0.75;
+      ex.style.setProperty('--s', (0.3 + ek * 1.2).toFixed(3));
+      ex.style.setProperty('--b', (6 - ek * 4).toFixed(1) + 'px');
+      ex.classList.toggle('twitch', ek > 0.6);
+      A.setExposure(0.2 + ek * 0.8);
+      hintOnce('expo', 'There is something in your lens. Lower the camera — photographing it banishes it, but the flash burns you.', 7000);
+    } else {
+      ex.style.opacity = 0; ex.classList.remove('twitch');
+      A.setExposure(0);
+    }
 
     // health
     $('health-fill').style.width = player.health + '%';
@@ -761,7 +785,9 @@
     }
 
     if (world && world.sky) { world.sky.position.copy(camera.position); world.stars.position.copy(camera.position); }
-    if (state !== 'credits' && state !== 'dead') renderer.render(scene, camera);
+    if (state === 'dead') {
+      if (deathShown) { deathRoom.update(dt, window.innerWidth / window.innerHeight); deathRoom.render(renderer); }
+    } else if (state !== 'credits') renderer.render(scene, camera);
     if (pendingCapture) capturePhoto();
 
     // 3D audio listener follows the camera
@@ -790,7 +816,7 @@
         case 'play': startGame(false); break;
         case 'graphics': openPanel('graphics', inPause ? 'pause' : 'title'); break;
         case 'audio': openPanel('audio', inPause ? 'pause' : 'title'); break;
-        case 'howto': openPanel('howto', 'title'); break;
+        case 'updates': openPanel('updates', 'title'); break;
         case 'back': closePanel(); break;
         case 'resume': resume(); break;
         case 'retry': startGame(true); break;
@@ -814,6 +840,8 @@
     const grain = LO.tex.canvas('grainOverlay');
     $('grain').style.backgroundImage = `url(${grain.toDataURL()})`;
     createRenderer();
+    deathRoom = new LO.DeathRoom();
+    try { document.fonts && document.fonts.load('40px Caveat'); } catch (e) { /* fallback fonts are fine */ }
     buildWorld();
     setupTitleScene();
     wireMenus();
@@ -837,7 +865,7 @@
     gate.addEventListener('click', leaveGate);
     window.addEventListener('keydown', leaveGate);
     // expose for debugging
-    LO.debug = { setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, get moths() { return moths; }, startGame, startEnding, beginPlay };
+    LO.debug = { get deathRoom() { return deathRoom; }, setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, get moths() { return moths; }, startGame, startEnding, beginPlay };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

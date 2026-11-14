@@ -425,3 +425,27 @@ body.still #objective, body.still #hint-btn, body.still #hint-arrow, body.still 
 body.still #bars label, body.still #health-num, body.still .hide-text {
   opacity: 0 !important; transition: opacity 0.4s;
 }
+
+/* ---------- v2.0: death room (3D scene renders behind this) ---------- */
+#death { background: none; }
+#death .death-inner { top: auto; bottom: 6vh; transform: translateX(-50%); }
+#death .menu { flex-direction: row; gap: 36px; justify-content: center; }
+#death .menu button { text-shadow: 0 0 10px #000; }
+#death .menu button::before { display: none; }
+
+/* ---------- update log ---------- */
+.updates .upd { border-left: 2px solid var(--line); padding: 2px 0 2px 14px; margin: 0 0 16px; }
+.updates .upd:first-of-type { border-left-color: var(--red); }
+.updates h3 { font-family: var(--font-title); font-weight: 400; letter-spacing: 3px; margin: 0 0 6px; font-size: 20px; }
+.updates h3 span { font-family: var(--font-body); font-size: 11px; letter-spacing: 1px; color: var(--red); margin-left: 8px; vertical-align: middle; }
+.updates ul { margin: 0; padding-left: 18px; color: #d6cfc0; font-size: 14px; line-height: 1.6; }
+#audio .keys { margin-top: 6px; }
+
+/* ---------- the Exposure ---------- */
+#exposure { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%) scale(var(--s, 0.3)); opacity: 0; filter: blur(var(--b, 6px)); transition: opacity 0.3s; }
+#exposure svg { height: 46vh; width: auto; display: block; }
+#exposure.twitch { animation: expoTwitch 0.18s infinite; }
+@keyframes expoTwitch { 0% { margin-left: 0; } 50% { margin-left: 5px; } 100% { margin-left: -4px; } }
+#exposure-face { position: fixed; inset: 0; z-index: 46; pointer-events: none; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse, rgba(30,30,30,0.5), #000 80%); }
+#exposure-face svg { height: 90vh; width: auto; filter: blur(2px) contrast(1.4); }
+#exposure-face.go { display: flex; animation: tenantJump 0.7s ease-out forwards; }

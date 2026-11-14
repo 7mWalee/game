@@ -47,6 +47,8 @@
       root: new THREE.Group(),
       colliders: [], occluders: [], hideSpots: [], pickups: [], evidence: [],
       interiors: [], flickers: [], animated: [], STREETS, HALF,
+      enterables: [], closedFronts: [], openLots: [], fixedEvidence: [],
+      evColliders: [], evOccluders: [],
     };
     scene.add(W.root);
 
@@ -112,8 +114,8 @@
       if (opts.occlude) W.occluders.push(mesh);
       return mesh;
     }
-    function collider(minX, maxX, minZ, maxZ, maxY) {
-      W.colliders.push({ minX, maxX, minZ, maxZ, maxY: maxY === undefined ? 50 : maxY });
+    function collider(minX, maxX, minZ, maxZ, maxY, minY) {
+      W.colliders.push({ minX, maxX, minZ, maxZ, maxY: maxY === undefined ? 50 : maxY, minY: minY || 0 });
     }
     // axis aligned box from world extents
     function boxAt(x0, x1, y0, y1, z0, z1, material, opts) {
@@ -217,7 +219,7 @@
 
     // ---------- lights ----------
     // very dark night: the flashlight and the broken street lamps are the real light sources
-    W.baseLight = { hemi: simple ? 0.09 : 0.07, moon: simple ? 0.05 : 0.06 };
+    W.baseLight = { hemi: simple ? 0.04 : 0.032, moon: simple ? 0.022 : 0.025 };
     W.hemi = new THREE.HemisphereLight(0x2a3650, 0x050507, W.baseLight.hemi);
     scene.add(W.hemi);
     W.moonLight = new THREE.DirectionalLight(0x8fa0c8, W.baseLight.moon);
@@ -380,11 +382,11 @@
       collider(x - 0.3 * s, x + 0.3 * s, z - 0.3 * s, z + 0.3 * s, 5);
     }
 
-    function rubblePile(x, z, r, n) {
+    function rubblePile(x, z, r, n, parent) {
       for (let i = 0; i < n; i++) {
         const s = R(0.4, 1.6);
         const m = box(s * R(0.8, 2), s * R(0.4, 1), s * R(0.8, 1.6), rand() < 0.6 ? M.rubble : M.brick,
-          x + R(-r, r), s * 0.3, z + R(-r, r), { ry: R(0, 3), rx: R(-0.3, 0.3), rz: R(-0.3, 0.3) });
+          x + R(-r, r), s * 0.3, z + R(-r, r), { ry: R(0, 3), rx: R(-0.3, 0.3), rz: R(-0.3, 0.3), parent });
         m.userData.rubble = true;
       }
     }
@@ -439,11 +441,11 @@
       const m = new THREE.Mesh(g, mats);
       m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
       add(m, { occlude: true });
-      collider(x0, x1, z0, z1, y1);
+      collider(x0, x1, z0, z1, y1, y0);
       return m;
     }
 
-    function buildEnterable(cx, cz, L, D, H, axis, sign, kind, evidenceKind) {
+    function buildEnterable(cx, cz, L, D, H, axis, sign, kind, opts) {
       const F = frame(cx, cz, axis, sign, L, D);
       const t = 0.35, ceil = 3.6, doorW = 2.2, doorH = 2.8;
       const facade = pick(M.facades);
@@ -538,29 +540,42 @@
         battery(p.x, 0.5, p.z);
       }
 
-      // ---- evidence inside ----
-      if (evidenceKind === 'cctv') {
-        // security desk with monitor showing the creature
-        const p = F.point(-gapA * 0.3 + (gapA > 0 ? -2.5 : 2.5), -hd + t + 1.0);
-        const ry = F.yawFront();
-        const desk = box(axis === 'z' ? 2.4 : 1, 0.9, axis === 'z' ? 1 : 2.4, M.wood, p.x, 0.45, p.z, { collide: true });
-        void desk;
-        const mon = new THREE.Group();
-        const casing = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.85, 0.5), mat({ color: 0x2b2b28 }));
-        const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.7), M.cctv);
-        screen.position.z = 0.26; mon.add(casing, screen);
-        mon.position.set(p.x, 1.35, p.z); mon.rotation.y = ry;
-        add(mon);
-        W.evidence.push({ id: 'cctv', name: 'CCTV still of the creature', pos: new THREE.Vector3(p.x, 1.35, p.z), maxDist: 7, found: false });
-      }
-      if (evidenceKind === 'warning') {
-        const p = F.point(0, -hd + t + 0.02);
-        const pm = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.6), M.warning);
-        pm.position.set(p.x, 1.7, p.z); pm.rotation.y = F.yawFront();
-        add(pm, { cast: false });
-        // pile of belongings below
-        rubblePile(p.x + (axis === 'z' ? 0 : sign * 1.5), p.z + (axis === 'z' ? sign * 1.5 : 0), 0.6, 4);
-        W.evidence.push({ id: 'warning', name: 'Survivor\'s warning', pos: new THREE.Vector3(p.x, 1.7, p.z), maxDist: 9, found: false });
+      const info = { F, hl, hd, t, pb, gapA, axis, sign, kind, sheriff: !!(opts && opts.sheriff), cx, cz };
+      W.enterables.push(info);
+
+      if (info.sheriff) {
+        // SHERIFF sign above the door
+        const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+        const g = c.getContext('2d');
+        g.fillStyle = '#1a2233'; g.fillRect(0, 0, 512, 128);
+        g.strokeStyle = '#c9a227'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
+        g.fillStyle = '#e8d9a0'; g.font = 'bold 76px Arial'; g.textAlign = 'center'; g.fillText('SHERIFF', 256, 92);
+        const sm = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(c) }));
+        const sp = F.point(0, hd + 0.04);
+        sm.position.set(sp.x, doorH + 0.9, sp.z); sm.rotation.y = F.yawFront();
+        add(sm, { cast: false });
+        // evidence room: a desk with an old TV and the tape
+        const da = gapA > 0 ? -hl + t + 2.0 : hl - t - 2.0;
+        const dp = F.point(da, -hd + t + 0.7);
+        box(axis === 'z' ? 2.6 : 1.1, 0.9, axis === 'z' ? 1.1 : 2.6, M.wood, dp.x, 0.45, dp.z, { collide: true });
+        const tv = new THREE.Group();
+        tv.add(new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.6), mat({ color: 0x1e1e1c })));
+        const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.46), new THREE.MeshBasicMaterial({ color: 0x0c1410 }));
+        scr.position.z = 0.31; tv.add(scr);
+        tv.position.set(dp.x, 1.2, dp.z); tv.rotation.y = F.yawFront();
+        add(tv);
+        const tp = F.point(da + (gapA > 0 ? 0.7 : -0.7), -hd + t + 0.9);
+        const tape = new THREE.Group();
+        const shell = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.025, 0.1), mat({ color: 0x111111 }));
+        const lc = document.createElement('canvas'); lc.width = 128; lc.height = 64;
+        const lg = lc.getContext('2d'); lg.fillStyle = '#eee8d0'; lg.fillRect(0, 0, 128, 64);
+        lg.fillStyle = '#b11'; lg.font = 'bold 15px Courier'; lg.fillText('OCT 23', 8, 24); lg.fillText('DO NOT ERASE', 8, 48);
+        const label = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.07), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc) }));
+        label.rotation.x = -Math.PI / 2; label.position.y = 0.014;
+        tape.add(shell, label);
+        tape.position.set(tp.x, 0.915, tp.z); tape.rotation.y = F.yawFront();
+        add(tape);
+        W.fixedEvidence.push({ id: 'tape', name: 'Sheriff\'s security tape', pos: new THREE.Vector3(tp.x, 0.95, tp.z), maxDist: 4, found: false, margin: 0.6 });
       }
     }
 
@@ -577,7 +592,9 @@
       add(m, { occlude: true });
       collider(x0, x1, z0, z1, H);
       // boarded door on the front
-      const dp = F.point(R(-L / 4, L / 4), D / 2 + 0.05);
+      const doorA = R(-L / 4, L / 4);
+      const dp = F.point(doorA, D / 2 + 0.05);
+      W.closedFronts.push({ F, L, D, H, doorA, axis });
       const door = box(axis === 'z' ? 1.6 : 0.1, 2.6, axis === 'z' ? 0.1 : 1.6, M.wood, dp.x, 1.3, dp.z);
       for (let i = 0; i < 3; i++) {
         box(axis === 'z' ? 2.0 : 0.12, 0.22, axis === 'z' ? 0.12 : 2.0, M.wood, dp.x, 0.7 + i * 0.8, dp.z, { rz: axis === 'z' ? R(-0.25, 0.25) : 0, rx: axis === 'x' ? R(-0.25, 0.25) : 0 });
@@ -626,15 +643,17 @@
     // ---------- forced special lots ----------
     // key: "blockI,blockJ,lotX,lotZ" (lotX/lotZ = -1 | 1)
     const SPECIAL = {
-      '2,0,-1,1': { type: 'enter', kind: 'police', evidence: 'cctv' },
-      '0,2,1,-1': { type: 'enter', kind: 'house', evidence: 'warning' },
+      '2,0,-1,1': { type: 'enter', kind: 'police', sheriff: true },   // the sheriff's station never moves
+      '0,2,1,-1': { type: 'enter', kind: 'house' },
       '1,0,-1,1': { type: 'enter', kind: 'shop' },          // near spawn
       '2,1,-1,-1': { type: 'enter', kind: 'office' },
+      '3,1,1,1': { type: 'enter', kind: 'house' },
+      '0,0,1,1': { type: 'enter', kind: 'office' },
       '1,1,1,1': { type: 'ruin' },                            // town centre devastation
-      '2,2,-1,-1': { type: 'ruin' },
-      '3,2,-1,-1': { type: 'closed', claws: true },
-      '1,3,1,1': { type: 'tower' },
+      '1,3,1,1': { type: 'park' },
       '2,0,1,-1': { type: 'park' },
+      '3,3,-1,-1': { type: 'parking' },
+      '0,3,1,-1': { type: 'parking' },
     };
 
     let enterCount = 0;
@@ -647,72 +666,26 @@
         let type;
         if (sp) type = sp.type;
         else {
+          // denser town: mostly buildings
           const r = rand();
-          type = r < 0.28 ? 'enter' : r < 0.68 ? 'closed' : r < 0.8 ? 'ruin' : r < 0.9 ? 'parking' : 'park';
-          if (type === 'enter' && enterCount > 8) type = 'closed';
+          type = r < 0.32 ? 'enter' : r < 0.86 ? 'closed' : r < 0.95 ? 'ruin' : 'parking';
+          if (type === 'enter' && enterCount > 11) type = 'closed';
         }
-        // facing: toward the street on the lot's outer side
         const axis = rand() < 0.5 ? 'x' : 'z';
         const sign = axis === 'x' ? lx : lz;
-        const L = sp && sp.type === 'closed' ? 16 : Math.round(R(12, 16));
-        const D = Math.round(R(12, 16));
-        const H = rand() < 0.75 ? R(6, 10) : R(11, 16);
+        const L = Math.round(R(13, 16));
+        const D = Math.round(R(13, 16));
+        const H = rand() < 0.7 ? R(7, 11) : R(12, 18);
         if (type === 'enter') {
           enterCount++;
-          buildEnterable(cx, cz, L, D, Math.max(H, 6), axis, sign, (sp && sp.kind) || pick(['house', 'shop', 'office', 'house']), sp && sp.evidence);
+          buildEnterable(cx, cz, L, D, Math.max(H, 6), axis, sign, (sp && sp.kind) || pick(['house', 'shop', 'office', 'house']), sp);
         } else if (type === 'closed') {
-          if (sp && sp.claws) {
-            const res = buildClosed(cx, cz, 16, 16, 9, 'x', -1);
-            // giant claw marks on the wall facing the street at x = cx-8
-            const c = document.createElement('canvas'); c.width = c.height = 256;
-            const g = c.getContext('2d');
-            for (let i = 0; i < 4; i++) {
-              g.save(); g.translate(60 + i * 40, 20); g.rotate(0.18);
-              const gr = g.createLinearGradient(0, 0, 14, 0);
-              gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(5,3,2,0.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-              g.fillStyle = gr;
-              g.beginPath(); g.moveTo(7, 0); g.quadraticCurveTo(20, 110, 7, 220); g.quadraticCurveTo(-6, 110, 7, 0); g.fill();
-              g.restore();
-            }
-            const tex = new THREE.CanvasTexture(c);
-            const cm = new THREE.Mesh(new THREE.PlaneGeometry(7, 8), new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-            cm.position.set(res.x0 - 0.03, 4.4, cz); cm.rotation.y = -Math.PI / 2;
-            W.root.add(cm);
-            rubblePile(res.x0 - 2, cz, 2, 6);
-            W.evidence.push({ id: 'claws', name: 'Giant claw marks', pos: new THREE.Vector3(res.x0, 4.4, cz), maxDist: 22, found: false, normal: new THREE.Vector3(-1, 0, 0) });
-          } else buildClosed(cx, cz, L, D, H, axis, sign);
+          buildClosed(cx, cz, L, D, H, axis, sign);
         } else if (type === 'ruin') {
           buildRuin(cx, cz, L, D);
-        } else if (type === 'tower') {
-          // water tower with a huge handprint dent
-          const tg = new THREE.Group();
-          for (const [ox, oz] of [[-2.5, -2.5], [2.5, -2.5], [-2.5, 2.5], [2.5, 2.5]]) {
-            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 12, 6), M.pole);
-            leg.position.set(ox, 6, oz); tg.add(leg);
-            collider(cx + ox - 0.3, cx + ox + 0.3, cz + oz - 0.3, cz + oz + 0.3, 12);
-          }
-          const tank = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 6, 16), M.water);
-          tank.position.y = 15; tank.scale.set(1, 1, 0.85); tank.rotation.z = 0.12; tg.add(tank);
-          const cone = new THREE.Mesh(new THREE.ConeGeometry(4.8, 2.5, 16), M.roof); cone.position.y = 19.2; cone.rotation.z = 0.12; tg.add(cone);
-          const txt = document.createElement('canvas'); txt.width = 512; txt.height = 256;
-          const g = txt.getContext('2d');
-          g.fillStyle = 'rgba(230,230,220,0.9)'; g.font = 'bold 70px Arial'; g.textAlign = 'center';
-          g.fillText('HOLLOW', 256, 100); g.fillText('CREEK', 256, 180);
-          // giant hand print (dark, smeared)
-          g.fillStyle = 'rgba(25,10,8,0.9)';
-          g.beginPath(); g.ellipse(330, 150, 55, 70, 0.2, 0, 7); g.fill();
-          for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(275 + i * 32, 60 - Math.abs(i - 1.5) * 10, 12, 50, -0.2 + i * 0.12, 0, 7); g.fill(); }
-          const tt = new THREE.CanvasTexture(txt);
-          const label = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), new THREE.MeshLambertMaterial({ map: tt, transparent: true }));
-          label.position.set(0, 15, 3.9); tg.add(label);
-          tg.position.set(cx, 0, cz); tg.rotation.y = -Math.PI / 4;
-          add(tg);
-          tg.traverse(o => o.isMesh && W.occluders.push(o));
-          const lp = new THREE.Vector3(0, 15, 3.9).applyEuler(tg.rotation).add(tg.position);
-          W.evidence.push({ id: 'tower', name: 'Handprint on the water tower', pos: lp, maxDist: 34, found: false });
-          rubblePile(cx + 3, cz + 3, 2, 5);
         } else {
           buildLot(cx, cz, type);
+          W.openLots.push({ cx, cz, type });
         }
       }
       // dumpster in each block's central alley, sometimes two
@@ -772,24 +745,6 @@
       box(R(0.3, 1.2), R(0.1, 0.5), R(0.3, 1.2), rand() < 0.5 ? M.rubble : M.wood, v ? s + R(-5, 5) : a, 0.15, v ? a : s + R(-5, 5), { ry: R(0, 3) });
     }
 
-    // ---------- outdoor evidence ----------
-    // 1. Giant footprint on Main Street (x = 52)
-    {
-      const fp = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 8), M.footprint);
-      fp.rotation.x = -Math.PI / 2; fp.rotation.z = 0.2; fp.position.set(52, 0.06, 30);
-      W.root.add(fp);
-      const fp2 = fp.clone(); fp2.position.set(49, 0.06, 52); fp2.rotation.z = -0.1; fp2.scale.x = -1; W.root.add(fp2);
-      rubblePile(52, 30, 3, 6);
-      W.evidence.push({ id: 'footprint', name: 'Giant footprint', pos: new THREE.Vector3(52, 0.1, 30), maxDist: 16, found: false, ground: true });
-    }
-    // 2. Crushed police cruiser
-    {
-      const pc = car(-30, -52, 1.2, { police: true, crushed: true });
-      void pc;
-      rubblePile(-30, -52, 3.5, 5);
-      W.evidence.push({ id: 'police', name: 'Crushed police cruiser', pos: new THREE.Vector3(-30, 0.6, -52), maxDist: 16, found: false });
-    }
-
     // =========================================================
     //  TOWN EDGE, ENTRANCE, FOREST
     // =========================================================
@@ -831,7 +786,7 @@
       let i = 0;
       while (i < n) {
         const x = R(-420, 420), z = R(-560, 420);
-        if (Math.abs(x) < HALF + 10 && Math.abs(z) < HALF + 10) continue;
+        if (Math.abs(x) < HALF + 32 && Math.abs(z) < HALF + 32) continue;
         if (Math.abs(x) < 12 && z < -HALF) continue; // keep the road clear
         if (Math.abs(x + 8) < 6 && Math.abs(z + 150) < 6) continue;
         const s = R(0.8, 1.6);
@@ -842,6 +797,19 @@
       }
       if (shadows) { trunk.castShadow = top.castShadow = true; }
       W.root.add(trunk, top);
+    }
+    // outskirts: a ring of dark buildings beyond the fence
+    for (const side of [0, 1, 2, 3]) {
+      for (let k = -HALF - 20; k < HALF + 20; k += R(13, 17)) {
+        if (side === 1 && Math.abs(k) < 16) continue;            // the south road
+        const d = HALF + R(12, 24), h = R(6, 20), w = R(9, 13), dd = R(9, 13);
+        const x = side === 0 ? k : side === 1 ? k : side === 2 ? d : -d;
+        const z = side === 0 ? d : side === 1 ? -d : k;
+        const g = worldUV(new THREE.BoxGeometry(w, h, dd), w, h, dd, 12);
+        const f = pick(M.facades);
+        const m = new THREE.Mesh(g, [f, f, M.roof, M.roof, f, f]);
+        m.position.set(x, h / 2, z); add(m);
+      }
     }
     // distant hills silhouette
     for (let i = 0; i < 14; i++) {
@@ -959,6 +927,164 @@
         p.mesh.rotation.y += dt;
       });
     };
+
+    // =========================================================
+    //  EVIDENCE — randomised every game (except the sheriff's tape)
+    // =========================================================
+    W.evGroup = new THREE.Group(); W.root.add(W.evGroup);
+    const clawTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const g = c.getContext('2d');
+      for (let i = 0; i < 4; i++) {
+        g.save(); g.translate(60 + i * 40, 20); g.rotate(0.18);
+        const gr = g.createLinearGradient(0, 0, 14, 0);
+        gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(5,3,2,0.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr;
+        g.beginPath(); g.moveTo(7, 0); g.quadraticCurveTo(20, 110, 7, 220); g.quadraticCurveTo(-6, 110, 7, 0); g.fill();
+        g.restore();
+      }
+      return new THREE.CanvasTexture(c);
+    })();
+    const sprayTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 512;
+      const g = c.getContext('2d');
+      g.fillStyle = 'rgba(150,12,12,0.92)'; g.font = 'bold 64px "Special Elite", Courier, monospace'; g.textAlign = 'center';
+      ['DONT MAKE', 'A SOUND', 'IT HEARS', 'EVERYTHING'].forEach((l, i) => {
+        g.save(); g.translate(256 + (Math.random() - 0.5) * 20, 100 + i * 100); g.rotate((Math.random() - 0.5) * 0.12); g.fillText(l, 0, 0); g.restore();
+      });
+      for (let i = 0; i < 30; i++) { g.fillRect(60 + Math.random() * 390, 90 + Math.random() * 330, 3, 10 + Math.random() * 40); }
+      return new THREE.CanvasTexture(c);
+    })();
+    const decalMat = map => new THREE.MeshLambertMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+
+    W.placeEvidence = function () {
+      W.evGroup.clear();
+      W.evColliders.length = 0; W.evOccluders.length = 0;
+      W.evidence = [];
+      const r = Math.random, pk = a => a[(r() * a.length) | 0];
+      const used = new Set();
+      const takeEnter = () => { const c = W.enterables.filter(b => !b.sheriff && !used.has(b)); const b = pk(c); used.add(b); return b; };
+      const takeFront = () => { const c = W.closedFronts.filter(b => !used.has(b) && b.H >= 7); const b = pk(c); used.add(b); return b; };
+      const evCol = (x0, x1, z0, z1, maxY) => W.evColliders.push({ minX: x0, maxX: x1, minZ: z0, maxZ: z1, maxY, minY: 0 });
+      const streetPoint = () => {
+        const s0 = pk(STREETS), along = pk(BLOCK_C) + (r() - 0.5) * 22, off = (r() - 0.5) * 6;
+        return r() < 0.5 ? { x: s0 + off, z: along, vertical: true } : { x: along, z: s0 + off, vertical: false };
+      };
+      // a room spot inside an enterable building: on a side wall (+/-a) or the back wall
+      const wallSpot = (b, which) => {
+        const { F, hl, hd, t, pb } = b;
+        if (which === 'back') return { p: F.point(0, -hd + t + 0.03), yaw: F.yawFront() };
+        const side = r() < 0.5 ? 1 : -1;
+        const lo = -hd + t + 1.5, hi = pb - 1.2;
+        const bb = hi > lo ? lo + r() * (hi - lo) : (pb + hd) / 2;
+        return { p: F.point(side * (hl - t - 0.03), bb), yaw: F.yawLeft() + (side > 0 ? Math.PI : 0) };
+      };
+
+      // 1. giant footprint — on a street or in an open lot
+      {
+        let x, z;
+        if (r() < 0.7 || !W.openLots.length) { const sp = streetPoint(); x = sp.x; z = sp.z; }
+        else { const l = pk(W.openLots); x = l.cx + (r() - 0.5) * 6; z = l.cz + (r() - 0.5) * 6; }
+        const fp = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 8), M.footprint);
+        fp.rotation.x = -Math.PI / 2; fp.rotation.z = r() * 6.28; fp.position.set(x, 0.06, z);
+        W.evGroup.add(fp);
+        rubblePile(x, z, 3, 6, W.evGroup);
+        W.evidence.push({ id: 'footprint', name: 'Giant footprint', pos: new THREE.Vector3(x, 0.1, z), maxDist: 16, found: false, ground: true });
+      }
+      // 2. crushed police cruiser — somewhere on the streets
+      {
+        const sp = streetPoint();
+        const ry = (sp.vertical ? 0 : Math.PI / 2) + (r() - 0.5) * 1.2;
+        const g = car(sp.x, sp.z, ry, { police: true, crushed: true, parent: W.evGroup, noCollide: true });
+        evCol(sp.x - 2.4, sp.x + 2.4, sp.z - 2.4, sp.z + 2.4, 1.2);
+        rubblePile(sp.x, sp.z, 3.5, 5, W.evGroup);
+        W.evidence.push({ id: 'police', name: 'Crushed police cruiser', pos: new THREE.Vector3(sp.x, 0.6, sp.z), maxDist: 16, found: false, margin: 3 });
+        void g;
+      }
+      // 3. giant claw marks — outside on a wall, or inside a building
+      {
+        if (r() < 0.5) {
+          const b = takeFront();
+          let a = (r() - 0.5) * (b.L - 8); if (Math.abs(a - b.doorA) < 3) a = b.doorA + (a < b.doorA ? -3 : 3);
+          const p = b.F.point(a, b.D / 2 + 0.03), y = Math.min(4.4, b.H * 0.5);
+          const cm = new THREE.Mesh(new THREE.PlaneGeometry(7, Math.min(8, b.H * 0.85)), decalMat(clawTex));
+          cm.position.set(p.x, y, p.z); cm.rotation.y = b.F.yawFront(); W.evGroup.add(cm);
+          W.evidence.push({ id: 'claws', name: 'Giant claw marks', pos: new THREE.Vector3(p.x, y, p.z), maxDist: 22, found: false });
+        } else {
+          const b = takeEnter(), w = wallSpot(b, 'side');
+          const cm = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 3.0), decalMat(clawTex));
+          cm.position.set(w.p.x, 1.8, w.p.z); cm.rotation.y = w.yaw; W.evGroup.add(cm);
+          W.evidence.push({ id: 'claws', name: 'Giant claw marks', pos: new THREE.Vector3(w.p.x, 1.8, w.p.z), maxDist: 9, found: false });
+        }
+      }
+      // 4. survivor's warning — inside on a wall, or sprayed on a building outside
+      {
+        if (r() < 0.6) {
+          const b = takeEnter(), w = wallSpot(b, 'back');
+          const pm = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.6), M.warning);
+          pm.position.set(w.p.x, 1.7, w.p.z); pm.rotation.y = w.yaw; W.evGroup.add(pm);
+          W.evidence.push({ id: 'warning', name: 'Survivor\'s warning', pos: new THREE.Vector3(w.p.x, 1.7, w.p.z), maxDist: 9, found: false });
+        } else {
+          const b = takeFront();
+          let a = (r() - 0.5) * (b.L - 7); if (Math.abs(a - b.doorA) < 3) a = b.doorA + (a < b.doorA ? -3 : 3);
+          const p = b.F.point(a, b.D / 2 + 0.03);
+          const pm = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), decalMat(sprayTex));
+          pm.position.set(p.x, 2.4, p.z); pm.rotation.y = b.F.yawFront(); W.evGroup.add(pm);
+          W.evidence.push({ id: 'warning', name: 'Survivor\'s warning', pos: new THREE.Vector3(p.x, 2.4, p.z), maxDist: 16, found: false });
+        }
+      }
+      // 5. CCTV still — on a security desk in a random building
+      {
+        const b = takeEnter();
+        const { F, hd, t, gapA, axis } = b;
+        const p = F.point(-gapA * 0.3 + (gapA > 0 ? -2.5 : 2.5), -hd + t + 1.0);
+        const desk = new THREE.Mesh(new THREE.BoxGeometry(axis === 'z' ? 2.4 : 1, 0.9, axis === 'z' ? 1 : 2.4), M.wood);
+        desk.position.set(p.x, 0.45, p.z); W.evGroup.add(desk);
+        evCol(p.x - (axis === 'z' ? 1.2 : 0.5), p.x + (axis === 'z' ? 1.2 : 0.5), p.z - (axis === 'z' ? 0.5 : 1.2), p.z + (axis === 'z' ? 0.5 : 1.2), 0.9);
+        const mon = new THREE.Group();
+        mon.add(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.85, 0.5), mat({ color: 0x2b2b28 })));
+        const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.7), M.cctv);
+        screen.position.z = 0.26; mon.add(screen);
+        mon.position.set(p.x, 1.35, p.z); mon.rotation.y = F.yawFront();
+        W.evGroup.add(mon);
+        W.evidence.push({ id: 'cctv', name: 'CCTV still of the creature', pos: new THREE.Vector3(p.x, 1.35, p.z), maxDist: 7, found: false });
+      }
+      // 6. water tower with a giant handprint — in an open lot
+      if (W.openLots.length) {
+        const l = pk(W.openLots), cx = l.cx, cz = l.cz;
+        const tg = new THREE.Group();
+        for (const [ox, oz] of [[-2.5, -2.5], [2.5, -2.5], [-2.5, 2.5], [2.5, 2.5]]) {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 12, 6), M.pole);
+          leg.position.set(ox, 6, oz); tg.add(leg);
+        }
+        const tank = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 6, 16), M.water);
+        tank.position.y = 15; tank.scale.set(1, 1, 0.85); tank.rotation.z = 0.12; tg.add(tank);
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(4.8, 2.5, 16), M.roof); cone.position.y = 19.2; cone.rotation.z = 0.12; tg.add(cone);
+        const txt = document.createElement('canvas'); txt.width = 512; txt.height = 256;
+        const g = txt.getContext('2d');
+        g.fillStyle = 'rgba(230,230,220,0.9)'; g.font = 'bold 70px Arial'; g.textAlign = 'center';
+        g.fillText('HOLLOW', 256, 100); g.fillText('CREEK', 256, 180);
+        g.fillStyle = 'rgba(25,10,8,0.9)';
+        g.beginPath(); g.ellipse(330, 150, 55, 70, 0.2, 0, 7); g.fill();
+        for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(275 + i * 32, 60 - Math.abs(i - 1.5) * 10, 12, 50, -0.2 + i * 0.12, 0, 7); g.fill(); }
+        const label = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(txt), transparent: true }));
+        label.position.set(0, 15, 3.9); tg.add(label);
+        tg.position.set(cx, 0, cz); tg.rotation.y = r() * Math.PI * 2;
+        W.evGroup.add(tg);
+        tg.updateMatrixWorld(true);
+        tg.traverse(o => o.isMesh && W.evOccluders.push(o));
+        [[-2.5, -2.5], [2.5, -2.5], [-2.5, 2.5], [2.5, 2.5]].forEach(([ox, oz]) => {
+          const v = new THREE.Vector3(ox, 0, oz).applyEuler(tg.rotation).add(tg.position);
+          evCol(v.x - 0.3, v.x + 0.3, v.z - 0.3, v.z + 0.3, 12);
+        });
+        const lp = new THREE.Vector3(0, 15, 3.9).applyEuler(tg.rotation).add(tg.position);
+        W.evidence.push({ id: 'tower', name: 'Handprint on the water tower', pos: lp, maxDist: 34, found: false, margin: 2 });
+      }
+      // 7. the sheriff's tape — always in the sheriff's station
+      W.fixedEvidence.forEach(e => { e.found = false; W.evidence.push(e); });
+      if (shadows) W.evGroup.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    };
+    W.placeEvidence();
 
     W.spawn = new THREE.Vector3(1.2, 0, -HALF + 6);
     W.playerCarPos = new THREE.Vector3(-3, 0, -HALF + 5);
