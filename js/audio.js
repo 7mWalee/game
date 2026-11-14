@@ -138,7 +138,18 @@
     for (let i = 0; i < curve.length; i++) { const x = i / (curve.length - 1) * 2 - 1; curve[i] = Math.tanh(x * 1.6) / Math.tanh(1.6); }
     sat.curve = curve; sat.oversample = '4x';
     const out = ctx.createGain(); out.gain.value = 1.0 * Math.min(1, S.master * 1.25) * Math.max(0.4, S.sfx);
-    s.connect(drive); drive.connect(sat); sat.connect(out); out.connect(ctx.destination); s.start();
+    s.connect(drive); drive.connect(sat); sat.connect(out); out.connect(ctx.destination);
+    const t0 = ctx.currentTime;
+    s.start(t0);
+    // ...and the TV switching off picks up exactly where the noise ends (1.40s), so its
+    // pop lands as the screen collapses (2.25s after death)
+    if (samples.tvoff) {
+      const tv = ctx.createBufferSource(); tv.buffer = samples.tvoff;
+      const tg = ctx.createGain(); tg.gain.value = 1.4 * Math.min(1, S.master * 1.25) * Math.max(0.4, S.sfx);
+      tv.connect(tg); tg.connect(ctx.destination);
+      tv.start(t0 + 1.40);
+      tvoffScheduled = t0;
+    }
   };
   A.stopRinging = function () { if (ringSrc) { try { ringSrc.stop(); } catch (e) {} ringSrc = null; } };
 
@@ -437,9 +448,12 @@
     n.connect(f); f.connect(g2); g2.connect(p); n.start(t); n.stop(t + 1.2);
   };
 
-  // an old TV switching off: a soft thunk and a falling whine
+  let tvoffScheduled = -99;
+  // an old TV switching off. The recorded switch-off is scheduled with the death noise;
+  // this synthesized one is only a fallback if that recording isn't available.
   A.tvOff = function () {
     if (!ctx) return;
+    if (samples.tvoff && ctx.currentTime - tvoffScheduled < 6) return;
     const t = ctx.currentTime;
     const o = ctx.createOscillator(); o.type = 'sine';
     o.frequency.setValueAtTime(9000, t); o.frequency.exponentialRampToValueAtTime(300, t + 0.45);
