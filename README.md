@@ -10,12 +10,12 @@ Open `index.html` in a modern browser (Chrome, Edge or Firefox). You don't need 
 - **Siren Head is blind and hunts by sound.** Walking, running, jumping, panting, your camera shutter and the buzz of your flashlight can all give you away.
 - If he hears you, he comes to investigate. Keep making noise and he gets **angry**. If he's angry and you're making noise when he reaches you, he gets you.
 - **Silence keeps you safe.** Stand still with the light off, or hide in a dumpster or locker. He can't catch you while you're completely silent.
-- **Don't hide too long.** Something called **the Tenant** lives in the hiding spots. After about 14 seconds it throws you out with a loud crash Siren Head can hear, then keeps that spot for a while. It also takes **30 HP**.
+- **Don't hide too long.** Something called **the Tenant** lives in the hiding spots. A red eye opens in the dark and creeps closer the longer you stay. If it reaches you (about 14 seconds), you die.
 - **You have 100 HP, and it never comes back.**
 - **Noise stacks.** Every source adds up: walking with your flashlight on is louder than either alone.
 - **Echolocation:** about once a minute Siren Head pings the town. It finds you even if you're silent or hidden, and he creeps closer. Each ping is more accurate.
-- **The Exposure** lives in your camera's viewfinder. The longer the camera is up, the closer it creeps. At 10 seconds it lunges for 20 HP. Photographing it banishes it but burns you for 10 HP, and flash photos of nothing draw it in faster. Use your flashlight to see, not the camera.
-- **Moths** are only visible while your flashlight is on. They stand motionless in dark corners and alleys. Keep your flashlight on one for 2 seconds and it **shrieks**: you lose 10 HP, and Siren Head hears it and gets angrier. Sweep your beam past them.
+- **The Exposure** lives in your camera's viewfinder. The longer the camera is up, the closer it creeps. At 10 seconds it lunges for 40 HP. Photographing it banishes it but burns you for 25 HP, and flash photos of nothing draw it in faster. Use your flashlight to see, not the camera.
+- **Moths** are only visible while your flashlight is on. They stand motionless in dark corners and alleys. Keep your flashlight on one for 2 seconds and it **shrieks**: you lose 20 HP, and Siren Head hears it and gets angrier. Sweep your beam past them.
 - **Rocks:** you occasionally find rocks on the ground (carry up to 3). Throw one with **G** and it lands loudly, pulling Siren Head toward that spot.
 - **Listen to the wind.** It blows dust and leaves through town. After 15 seconds of total silence it **stops completely** and the whole world goes silent with it: no music, no voices, none of Siren Head's sounds and no text on screen. That's your first warning.
 - **Don't stay completely silent for too long either.** After 20 seconds of total silence (hiding counts), **the Silent One (Phenomenon-249)** starts closing in. At 30 seconds it attacks, taking 5 HP every second until you make any sound.

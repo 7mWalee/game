@@ -15,7 +15,7 @@
   const TENANT_DAMAGE = 30;
   const MAX_ROCKS = 3;
   // THE EXPOSURE: appears in the viewfinder after 4s of camera use, lunges at 10s
-  const EXPO = { SHOW: 4, LUNGE: 10, DECAY: 0.6, WASTED: 2.5, LUNGE_DMG: 20, BANISH_DMG: 10 };
+  const EXPO = { SHOW: 4, LUNGE: 10, DECAY: 0.6, WASTED: 2.5, LUNGE_DMG: 40, BANISH_DMG: 25 };
   LO.EXPO = EXPO;
   LO.MAX_ROCKS = MAX_ROCKS;
   // THE SILENT ONE (Phenomenon-249): drawn to complete silence
@@ -161,7 +161,7 @@
       // THE TENANT: something already lives in every hiding spot.
       // Stay too long and it throws you out.
       if (!this.calm) this.hideTime += dt;
-      if (this.hideTime >= TENANT_LIMIT) { this.kickOut(); }
+      if (this.hideTime >= TENANT_LIMIT) { this.damage(9999, 'tenant'); }   // it reached you
       this.panting = Math.max(0, this.panting - dt * 0.5);
     } else {
       this.hideTime = Math.max(0, this.hideTime - dt * 0.5);

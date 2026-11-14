@@ -58,11 +58,10 @@
       for (let i = 0; i < 9; i++) { g.beginPath(); g.moveTo(-s * 0.15, s * 0.05 + i * s * 0.05); g.lineTo(s * 0.15, s * 0.05 + i * s * 0.05 + (Math.random() - 0.5) * s * 0.02); g.stroke(); }
     },
     tenant(g, s, k) {
-      g.fillStyle = 'rgba(10,0,0,0.85)'; g.fillRect(-s * 0.35, -s * 0.5, s * 0.7, s * 1.0);
-      g.fillStyle = 'rgba(255,230,200,0.95)';
-      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(d * s * 0.11, -s * 0.08, s * 0.07, s * 0.03 + Math.random() * s * 0.004, 0, 0, 7); g.fill(); });
-      g.strokeStyle = 'rgba(255,200,180,0.7)'; g.lineWidth = s * 0.008;
-      g.beginPath(); for (let i = 0; i <= 12; i++) { const x = -s * 0.18 + i * s * 0.03; g.lineTo(x, s * 0.1 + (i % 2 ? s * 0.035 : 0)); } g.stroke();
+      g.fillStyle = 'rgba(10,0,0,0.92)';
+      g.beginPath(); g.moveTo(-s * 0.55, 0); g.quadraticCurveTo(0, -s * 0.42, s * 0.55, 0); g.quadraticCurveTo(0, s * 0.42, -s * 0.55, 0); g.fill();
+      g.fillStyle = 'rgba(255,50,30,0.8)'; g.beginPath(); g.ellipse(0, 0, s * 0.17, s * 0.17, 0, 0, 7); g.fill();
+      g.fillStyle = 'rgba(0,0,0,0.95)'; g.beginPath(); g.ellipse(0, 0, s * 0.035, s * 0.14 + Math.random() * s * 0.01, 0, 0, 7); g.fill();
     },
     silent(g, s, k) {
       g.fillStyle = 'rgba(10,0,0,0.9)';

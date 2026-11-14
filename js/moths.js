@@ -7,7 +7,7 @@
 (function () {
   const V3 = THREE.Vector3;
   const LIGHT_LIMIT = 2.0;   // seconds of light before it shrieks
-  const DAMAGE = 10;
+  const DAMAGE = 20;
   const COUNT = 12;
   const BEAM_ANGLE = 0.42;   // radians — roughly the bright part of the beam
   const BEAM_RANGE = 34;

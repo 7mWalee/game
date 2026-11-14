@@ -764,12 +764,14 @@
     // the Tenant grows restless the longer you hide
     const tf = Math.min(1, player.hideTime / LO.TENANT_LIMIT);
     if (player.hidden) {
-      const eyes = Math.max(0, (tf - 0.35) / 0.65);
-      $('tenant-eyes').style.opacity = eyes;
-      $('tenant-eyes').style.transform = `translate(-50%, -50%) scale(${0.6 + eyes * 0.9})`;
-      $('tenant-bar').firstChild.style.width = (tf * 100) + '%';
-      $('hide-text').textContent = tf < 0.4 ? 'HIDING — press E to leave' : tf < 0.75 ? 'You are not alone in here...' : 'GET OUT. GET OUT. GET OUT.';
-      $('hide-overlay').classList.toggle('restless', tf >= 0.75);
+      // a red eye opens in the dark and keeps coming closer until it reaches you
+      const eye = Math.max(0, (tf - 0.25) / 0.75);
+      const ex = $('tenant-eye');
+      ex.style.opacity = eye > 0 ? Math.min(1, 0.35 + eye) : 0;
+      ex.style.transform = `translate(-50%, -50%) scale(${(0.18 + Math.pow(eye, 1.6) * 3.6).toFixed(3)})`;
+      $('tenant-red').style.opacity = (Math.pow(eye, 1.3) * 0.95).toFixed(3);
+      $('hide-text').textContent = eye > 0 ? 'Get out of there' : 'HIDING — press E to leave';
+      $('hide-overlay').classList.toggle('restless', eye > 0.6);
       A.setTenant(Math.max(0, (tf - 0.3) / 0.7));
     } else A.setTenant(0);
 

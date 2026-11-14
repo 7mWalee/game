@@ -567,6 +567,7 @@
     }
     const t = ctx.currentTime;
     const a = Math.max(0, amount);
+    if (!isFinite(a)) return;
     tenant.g.gain.setTargetAtTime(a * a * 0.5, t, 0.2);
     tenant.og.gain.setTargetAtTime(a * a * 0.35, t, 0.3);
     tenant.lfo.frequency.setTargetAtTime(5 + a * 9 + Math.random() * 3, t, 0.1);
