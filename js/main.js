@@ -135,7 +135,7 @@
     player.hint = showHint;
     player.onPhoto = onPhoto;
     player.onDamage = (amount, cause) => {
-      A.hurt();
+      if (player.health > 0) A.hurt();
       const d = $('damage');
       d.style.transition = 'none'; d.style.opacity = 0.9;
       setTimeout(() => { d.style.transition = 'opacity 0.8s'; d.style.opacity = 0; }, 60);
@@ -638,9 +638,8 @@
     A.setTenant(0);
     if (document.pointerLockElement) document.exitPointerLock();
     A.playMusic(null, 0.5);
-    if (cause === 'silent') { A.silentHit(); A.setSilentOne(1); } else if (cause === 'tenant') A.tenantScream(); else if (cause === 'exposure') A.exposureLunge();
+    A.playDeathNoise();
     A.setMothFlutter(0);
-    A.staticBurst(null, 2.2, 0.25);
   }
   function onCaught() {
     if (state !== 'play' || siren.catchDisabled) return;
@@ -657,9 +656,8 @@
     siren.speedNow = 0;
     // turn to face the player
     siren.yaw = Math.atan2(player.pos.x - siren.pos.x, player.pos.z - siren.pos.z);
-    A.deathScream();
+    A.playDeathNoise();
     A.playMusic(null, 0.5);
-    A.staticBurst(null, 2.2, 0.25);
   }
   function updateDying(dt) {
     dieT += dt;

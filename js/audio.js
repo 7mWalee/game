@@ -125,6 +125,13 @@
     ringSrc = s;
     s.onended = () => { if (ringSrc === s) ringSrc = null; };
   };
+  // the death noise (one-shot)
+  A.playDeathNoise = function () {
+    if (!ctx || !samples.deathnoise) return;
+    const s = ctx.createBufferSource(); s.buffer = samples.deathnoise;
+    const g = ctx.createGain(); g.gain.value = 1.1;
+    s.connect(g); g.connect(sfxBus); s.start();
+  };
   A.stopRinging = function () { if (ringSrc) { try { ringSrc.stop(); } catch (e) {} ringSrc = null; } };
 
   // the wind has stopped: silence music, voices and every sound the world makes
