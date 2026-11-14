@@ -279,7 +279,7 @@
 
   // ambient wind bed
   let wind = null;
-  A.setWind = function (vol) {
+  A.setWind = function (vol, gustAmt, tc) {
     if (!ctx) return;
     if (!wind) {
       const n = noiseSrc(true, true);
@@ -289,9 +289,18 @@
       const lg = ctx.createGain(); lg.gain.value = 250;
       lfo.connect(lg); lg.connect(f.frequency);
       n.connect(f); f.connect(g); g.connect(sfxBus); n.start(); lfo.start();
-      wind = { g };
+      // a thin whistle that rises with gusts
+      const n2 = noiseSrc(false, true);
+      const wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 900; wf.Q.value = 9;
+      const wg = ctx.createGain(); wg.gain.value = 0;
+      n2.connect(wf); wf.connect(wg); wg.connect(sfxBus); n2.start();
+      wind = { g, wg, wf };
     }
-    wind.g.gain.setTargetAtTime(vol, ctx.currentTime, 1.0);
+    // vol: overall level, gust: 0..1 strength of the current gust, tc: fade time
+    const t = ctx.currentTime, gust = gustAmt === undefined ? 0.5 : gustAmt;
+    wind.g.gain.setTargetAtTime(vol * (0.6 + gust * 0.8), t, tc || 1.0);
+    wind.wg.gain.setTargetAtTime(vol * gust * gust * 0.5, t, tc || 1.0);
+    wind.wf.frequency.setTargetAtTime(700 + gust * 700, t, 0.6);
   };
 
   // ---------- THE TENANT (hiding spot lurker) ----------

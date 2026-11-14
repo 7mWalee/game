@@ -269,6 +269,7 @@
   }
   function updateTitle(dt) {
     titleT += dt;
+    world.updateWind(dt, 0.8, camera.position, titleT);
     siren.speedNow = 0.6 + Math.sin(titleT * 0.3) * 0.6;
     siren.update(dt, null, titleT);
     const a = titleT * 0.04;
@@ -367,7 +368,8 @@
     show('hud');
     ui.fadeIn(1.5);
     A.playMusic('explore', 3);
-    A.setWind(0.18);
+    windStrength = 1;
+    A.setWind(0.26, 0.5);
     lockPointer();
     setTimeout(() => {
       if (state !== 'play') return;
@@ -581,6 +583,22 @@
     }
   }
 
+  // ---------- wind: dies completely after 15 seconds of silence ----------
+  const WIND_STOP = 15;
+  let windStrength = 1, gustT = 0;
+  function updateWindState(dt) {
+    const still = player.silentTime >= WIND_STOP;
+    const target = still ? 0 : 1;
+    // it stops quickly and eerily, and comes back gradually
+    windStrength += (target - windStrength) * Math.min(1, dt * (still ? 2.5 : 0.6));
+    if (windStrength < 0.01) windStrength = 0;
+    gustT += dt;
+    const gust = Math.max(0, Math.min(1, 0.45 + Math.sin(gustT * 0.31) * 0.3 + Math.sin(gustT * 0.83 + 1.7) * 0.25));
+    A.setWind(0.26 * windStrength, gust, still ? 0.25 : 1.2);
+    world.updateWind(dt, windStrength * (0.6 + gust * 0.6), camera.position, gameTime);
+    if (still) hintOnce('windstop', '...the wind has stopped.', 4000);
+  }
+
   // ============================================================
   //  HUD
   // ============================================================
@@ -683,6 +701,7 @@
       world.update(dt, gameTime);
       updateHUD();
       updateHintUI();
+      updateWindState(dt);
       // music & heartbeat follow the danger
       const d = siren.distToPlayer || 999;
       const near = Math.max(0, 1 - d / 70);
@@ -701,6 +720,7 @@
         if (skipHeld > 1.2) { A.stopVoices(); cutscene.finish(); }
       } else if (skipHeld) { skipHeld = 0; $('skip-bar').firstChild.style.width = '0'; }
       if (cutscene) cutscene.update(dt);
+      if (world && world.updateWind) world.updateWind(dt, 0.5, camera.position, gameTime);
       if (world) world.update(dt, gameTime += dt);
     }
 

@@ -882,6 +882,48 @@
     // =========================================================
     //  UPDATE (flickering lights, pickups bobbing)
     // =========================================================
+    // ---------- wind-blown dust and leaves around the camera ----------
+    {
+      const N = S.textures === 'low' ? 220 : 480, BOX = 36, H = 10;
+      const pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        pos[i * 3] = (rand() - 0.5) * BOX; pos[i * 3 + 1] = rand() * H; pos[i * 3 + 2] = (rand() - 0.5) * BOX;
+        const leaf = rand() < 0.4, v = 0.25 + rand() * 0.3;
+        col[i * 3] = leaf ? v * 1.1 : v; col[i * 3 + 1] = leaf ? v * 0.8 : v; col[i * 3 + 2] = leaf ? v * 0.45 : v * 0.95;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.06, vertexColors: true, transparent: true, opacity: 0.7, depthWrite: false }));
+      pts.frustumCulled = false;
+      scene.add(pts);
+      const phase = new Float32Array(N).map(() => rand() * 10);
+      W.dust = { pts, pos, phase, N, BOX, H };
+    }
+    W.windDir = new THREE.Vector3(1, 0, 0.45).normalize();
+    // strength 0..1; at 0 everything settles to the ground and goes still
+    W.updateWind = function (dt, strength, cam, time) {
+      const D = W.dust, p = D.pos, half = D.BOX / 2;
+      const sp = 9 * strength;
+      for (let i = 0; i < D.N; i++) {
+        const k = i * 3;
+        if (strength > 0.05) {
+          const flutter = Math.sin(time * 3 + D.phase[i]);
+          p[k] += (W.windDir.x * sp + flutter * 0.6 * strength) * dt;
+          p[k + 2] += (W.windDir.z * sp + Math.cos(time * 2.3 + D.phase[i]) * 0.6 * strength) * dt;
+          p[k + 1] += (flutter * 0.9 * strength - 0.25) * dt;
+          if (p[k + 1] < 0.03) p[k + 1] = D.H * Math.random();
+        } else if (p[k + 1] > 0.03) {
+          p[k + 1] = Math.max(0.03, p[k + 1] - dt * 1.2); // drifts down and stays
+        }
+        // keep the particle box centred on the camera
+        let x = p[k] - cam.x, z = p[k + 2] - cam.z;
+        if (x > half) p[k] -= D.BOX; else if (x < -half) p[k] += D.BOX;
+        if (z > half) p[k + 2] -= D.BOX; else if (z < -half) p[k + 2] += D.BOX;
+      }
+      D.pts.geometry.attributes.position.needsUpdate = true;
+    };
+
     W.update = function (dt, time) {
       W.flickers.forEach(f => {
         f.t -= dt;

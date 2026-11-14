@@ -12,6 +12,7 @@ Open `index.html` in a modern browser (Chrome, Edge or Firefox). You don't need 
 - **Silence keeps you safe.** Stand still with the light off, or hide in a dumpster or locker. He can't catch you while you're completely silent.
 - **Don't hide too long.** Something called **the Tenant** lives in the hiding spots. After about 14 seconds it throws you out with a loud crash Siren Head can hear, then keeps that spot for a while. It also takes **30 HP**.
 - **You have 100 HP, and it never comes back.**
+- **Listen to the wind.** It blows dust and leaves through town. After 15 seconds of total silence it **stops completely**: your first warning.
 - **Don't stay completely silent for too long either.** After 20 seconds of total silence (hiding counts), **the Silent One (Phenomenon-249)** starts closing in. At 30 seconds it attacks, taking 5 HP every second until you make any sound.
 - The white marker on the **NOISE** bar shows how close he is. If your noise goes past the marker, he can hear you.
 
