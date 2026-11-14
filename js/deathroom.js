@@ -278,7 +278,7 @@
     const plateBox = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.16, 0.25), plastic); plateBox.position.set(0, 0.5, 0.05); tv.add(plateBox);
     const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.11), new THREE.MeshBasicMaterial({ map: this.labelTex }));
     plate.position.set(0, 0.5, 0.181); tv.add(plate);
-    tv.position.set(0.55, 1.22, -0.55); tv.rotation.y = -0.22;
+    tv.position.set(0.8, 1.22, -0.58); tv.rotation.y = -0.26;
     scene.add(tv);
 
     // notebook: the cover flips open to reveal a sketch (inside of cover) and tips (right page)
@@ -374,7 +374,7 @@
     const portrait = aspect < 1;
     const bob = Math.sin(t * 1.3) * 0.006, sway = Math.sin(t * 0.8) * 0.012;
     if (portrait) { this.book.position.set(-0.02, -0.2 + bob, -0.9); this.book.scale.setScalar(0.62); }
-    else { this.book.position.set(-0.3 + sway, 0.03 + bob, -0.92); this.book.scale.setScalar(0.62); }
+    else { this.book.position.set(-0.32 + sway, 0.03 + bob, -0.92); this.book.scale.setScalar(0.62); }
     this.book.rotation.z = 0.04 + Math.sin(t * 0.9) * 0.01;
     // the notebook opens
     const o = Math.max(0, Math.min(1, (t - 1.2) / 1.3));
