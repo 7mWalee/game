@@ -452,3 +452,6 @@ body.still #bars label, body.still #health-num, body.still .hide-text {
 
 /* title screen shot transitions (under the menu, over the 3D view) */
 #title-fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 4; }
+
+/* death transition overlay (red flood, static, TV switch-off / switch-on) */
+#tvfx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 42; pointer-events: none; }

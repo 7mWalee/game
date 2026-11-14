@@ -387,6 +387,7 @@
 
   function goTitle() {
     if (cutscene) endCutscene();
+    LO.TVFX.clear();
     A.stopDeathMusic(); A.stopRinging(); clearTimeout(deathTimer);
     A.stopVoices();
     hideAllScreens();
@@ -429,6 +430,7 @@
   }
 
   function startGame(skipIntro) {
+    LO.TVFX.clear();
     A.stopDeathMusic(); A.stopRinging(); clearTimeout(deathTimer);
     A.init();
     A.stopVoices();
@@ -638,7 +640,7 @@
     A.playMusic(null, 0.5);
     if (cause === 'silent') { A.silentHit(); A.setSilentOne(1); } else if (cause === 'tenant') A.tenantScream(); else if (cause === 'exposure') A.exposureLunge();
     A.setMothFlutter(0);
-    $('damage').style.transition = 'opacity 0.3s'; $('damage').style.opacity = 1;
+    A.staticBurst(null, 2.2, 0.25);
   }
   function onCaught() {
     if (state !== 'play' || siren.catchDisabled) return;
@@ -657,10 +659,11 @@
     siren.yaw = Math.atan2(player.pos.x - siren.pos.x, player.pos.z - siren.pos.z);
     A.deathScream();
     A.playMusic(null, 0.5);
-    $('damage').style.opacity = 1;
+    A.staticBurst(null, 2.2, 0.25);
   }
   function updateDying(dt) {
     dieT += dt;
+    LO.TVFX.dying(dieT);              // red flood, then red static
     if (dieCause !== 'siren') {
       // collapse to the ground
       const k = Math.min(1, dieT / 1.4);
@@ -688,8 +691,9 @@
       A.setSilentOne(0); A.setExposure(0); A.setMothFlutter(0); A.setTenant(0);
       A.setStillness(false); document.body.classList.remove('still');
       $('silent-one').style.opacity = 0;
-      ui.fadeOut(0.3);
-      setTimeout(() => {
+      // the picture switches off like an old TV, then flicks back on in the death room
+      A.tvOff();
+      LO.TVFX.off(() => {
         hideAllScreens();
         show('death');
         $('damage').style.opacity = 0;
@@ -704,8 +708,8 @@
         };
         clearTimeout(deathTimer);
         if (!A.playDeathMusic(kickToTitle)) deathTimer = setTimeout(kickToTitle, 58000);
-        ui.fadeIn(1.2);
-      }, 400);
+        $('fade').style.transition = 'none'; $('fade').style.opacity = 0;
+      });
     }
   }
 
@@ -880,6 +884,7 @@
       upv.set(0, 1, 0).applyQuaternion(camera.quaternion);
       A.setListener(camera.position, fwd, upv);
     }
+    LO.TVFX.update(dt);
     if (S.showFps) {
       fpsAcc += dt; fpsFrames++;
       if (fpsAcc > 0.5) { $('fps').textContent = Math.round(fpsFrames / fpsAcc) + ' FPS'; fpsAcc = 0; fpsFrames = 0; }

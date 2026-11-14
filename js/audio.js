@@ -422,6 +422,20 @@
     n.connect(f); f.connect(g2); g2.connect(p); n.start(t); n.stop(t + 1.2);
   };
 
+  // an old TV switching off: a soft thunk and a falling whine
+  A.tvOff = function () {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(9000, t); o.frequency.exponentialRampToValueAtTime(300, t + 0.45);
+    const g = ctx.createGain(); env(g, t, 0.003, 0.08, 0.45, 0.0001);
+    o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 0.5);
+    const th = ctx.createOscillator(); th.type = 'sine';
+    th.frequency.setValueAtTime(90, t); th.frequency.exponentialRampToValueAtTime(35, t + 0.25);
+    const g2 = ctx.createGain(); env(g2, t, 0.002, 0.6, 0.25, 0.0001);
+    th.connect(g2); g2.connect(sfxBus); th.start(t); th.stop(t + 0.3);
+  };
+
   // ---------- THE EXPOSURE ----------
   let expo = null;
   // a lens-whine and detuned hum that grows as it gets closer in the viewfinder
