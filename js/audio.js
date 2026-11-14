@@ -131,8 +131,14 @@
     if (!ctx || !samples.deathnoise) return;
     const s = ctx.createBufferSource(); s.buffer = samples.deathnoise;
     // straight to the speakers (skipping the game's compressor) so nothing squashes it
-    const g = ctx.createGain(); g.gain.value = 1.0 * S.master * Math.max(0.3, S.sfx);
-    s.connect(g); g.connect(ctx.destination); s.start();
+    // pushed hard into a soft saturator: louder than anything else in the game, without harsh clipping
+    const drive = ctx.createGain(); drive.gain.value = 2.2;
+    const sat = ctx.createWaveShaper();
+    const curve = new Float32Array(2048);
+    for (let i = 0; i < curve.length; i++) { const x = i / (curve.length - 1) * 2 - 1; curve[i] = Math.tanh(x * 1.6) / Math.tanh(1.6); }
+    sat.curve = curve; sat.oversample = '4x';
+    const out = ctx.createGain(); out.gain.value = 1.0 * Math.min(1, S.master * 1.25) * Math.max(0.4, S.sfx);
+    s.connect(drive); drive.connect(sat); sat.connect(out); out.connect(ctx.destination); s.start();
   };
   A.stopRinging = function () { if (ringSrc) { try { ringSrc.stop(); } catch (e) {} ringSrc = null; } };
 
