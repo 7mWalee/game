@@ -315,6 +315,45 @@
     wind.wf.frequency.setTargetAtTime(700 + gust * 700, t, 0.6);
   };
 
+  // ---------- THE MOTHS ----------
+  let moth = null;
+  // papery flutter that rises while your light rests on one
+  A.setMothFlutter = function (amount) {
+    if (!ctx) return;
+    if (!moth) {
+      const n = noiseSrc(false, true);
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 3500;
+      const amp = ctx.createGain(); amp.gain.value = 0;
+      const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 26;
+      const lg = ctx.createGain(); lg.gain.value = 0.5;
+      lfo.connect(lg); lg.connect(amp.gain);
+      const g = ctx.createGain(); g.gain.value = 0;
+      n.connect(f); f.connect(amp); amp.connect(g); g.connect(sfxBus);
+      n.start(); lfo.start();
+      moth = { g, lfo };
+    }
+    const t = ctx.currentTime, a = Math.max(0, Math.min(1, amount));
+    moth.g.gain.setTargetAtTime(a * a * 0.35, t, 0.08);
+    moth.lfo.frequency.setTargetAtTime(18 + a * 30, t, 0.1);
+  };
+  A.mothShriek = function (pos) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const p = panner(pos, 10, 0.8); p.connect(sfxBus);
+    [1, 1.07, 1.49].forEach((mul, i) => {
+      const o = ctx.createOscillator(); o.type = i === 2 ? 'square' : 'sawtooth';
+      o.frequency.setValueAtTime(1300 * mul, t);
+      o.frequency.linearRampToValueAtTime(2600 * mul, t + 0.25);
+      o.frequency.exponentialRampToValueAtTime(500 * mul, t + 1.4);
+      const g = ctx.createGain(); env(g, t, 0.01, 0.28, 1.4, 0.0001);
+      o.connect(g); g.connect(p); o.start(t); o.stop(t + 1.5);
+    });
+    const n = noiseSrc(false, false);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 4000; f.Q.value = 2;
+    const g2 = ctx.createGain(); env(g2, t, 0.005, 0.6, 1.0, 0.0001);
+    n.connect(f); f.connect(g2); g2.connect(p); n.start(t); n.stop(t + 1.2);
+  };
+
   // ---------- echolocation ping (Siren Head) ----------
   A.echoPing = function (voice) {
     if (!ctx) return;

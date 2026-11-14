@@ -14,6 +14,7 @@ Open `index.html` in a modern browser (Chrome, Edge or Firefox). You don't need 
 - **You have 100 HP, and it never comes back.**
 - **Noise stacks.** Every source adds up: walking with your flashlight on is louder than either alone.
 - **Echolocation:** about once a minute Siren Head pings the town. It finds you even if you're silent or hidden, and he creeps closer. Each ping is more accurate.
+- **Moths** stand motionless in dark corners and alleys. Keep your flashlight on one for 2 seconds and it **shrieks**: you lose 10 HP, and Siren Head hears it and gets angrier. Sweep your beam past them.
 - **Rocks:** you occasionally find rocks on the ground (carry up to 3). Throw one with **G** and it lands loudly, pulling Siren Head toward that spot.
 - **Listen to the wind.** It blows dust and leaves through town. After 15 seconds of total silence it **stops completely** and the whole world goes silent with it: no music, no voices, none of Siren Head's sounds and no text on screen. That's your first warning.
 - **Don't stay completely silent for too long either.** After 20 seconds of total silence (hiding counts), **the Silent One (Phenomenon-249)** starts closing in. At 30 seconds it attacks, taking 5 HP every second until you make any sound.
@@ -52,6 +53,7 @@ js/textures.js    procedural textures
 js/world.js       the town, buildings, props, evidence and hiding spots
 js/sirenhead.js   Siren Head model, animation and hearing behaviour
 js/player.js      movement, noise, stamina, flashlight, camera and hiding
+js/moths.js       the Moths
 js/cutscenes.js   opening and ending cutscenes
 js/main.js        game flow, menus and main loop
 js/lib/three.min.js  three.js r149 (MIT)

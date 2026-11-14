@@ -7,7 +7,7 @@
   const $ = id => document.getElementById(id);
   const EVIDENCE_NEEDED = 4;
 
-  let renderer, scene, camera, world, siren, player;
+  let renderer, scene, camera, world, siren, player, moths;
   let state = 'gate';          // gate | title | opening | play | paused | dying | dead | ending | credits
   let cutscene = null, cutCtx = null;
   let menuReturn = 'title';    // which screen an options panel goes back to
@@ -108,6 +108,16 @@
     camera.children.slice().forEach(c => camera.remove(c));
     world = LO.World.build(scene);
     siren = new LO.SirenHead(scene, world);
+    if (moths) moths.dispose();
+    moths = new LO.Moths(scene, world);
+    moths.onShriek = pos => {
+      if (state !== 'play') return;
+      // a moth's shriek carries a long way and it makes him angry
+      siren.anger = Math.min(100, siren.anger + 35);
+      siren.hearNoise(pos, 90);
+      player.shake = Math.max(player.shake, 0.5);
+      hintOnce('moth', 'A MOTH. Don\'t keep your light on them — it shrieked, and he heard it.', 6500);
+    };
     player = new LO.Player(camera, world, scene);
     player.hint = showHint;
     player.onPhoto = onPhoto;
@@ -297,7 +307,7 @@
     player.enabled = false;
     player.flashOn = false;
     A.setFlashlightBuzz(false); A.setBreathing(0); A.setHeartbeat(0); A.setTenant(0); A.setSilentOne(0);
-    A.setStillness(false); document.body.classList.remove('still');
+    A.setStillness(false); document.body.classList.remove('still'); A.setMothFlutter(0);
     $('silent-one').style.opacity = 0;
     if (worldDirty || state === 'ending' || state === 'credits' || state === 'dead') buildWorld();
     setupTitleScene();
@@ -324,6 +334,7 @@
     siren.anger = 0; siren.catchDisabled = false; siren.state = 'wander'; siren.path = []; siren.lastHeardTime = -999;
     siren.spawnFar();
     player.reset(world.spawn, Math.PI);
+    moths.reset();
     gameTime = 0;
     lastEvidenceTime = 0; hintUntil = 0;
     updateEvidenceUI();
@@ -411,7 +422,7 @@
     player.enabled = false;
     show('pause');
     if (window.speechSynthesis) try { speechSynthesis.pause(); } catch (e) {}
-    A.setFlashlightBuzz(false); A.setBreathing(0); A.setTenant(0); A.setSilentOne(0);
+    A.setFlashlightBuzz(false); A.setBreathing(0); A.setTenant(0); A.setSilentOne(0); A.setMothFlutter(0);
   }
   function resume() {
     hideAllScreens();
@@ -473,6 +484,7 @@
   }
 
   function startEnding() {
+    if (moths) { moths.root.visible = false; A.setMothFlutter(0); }
     state = 'ending';
     player.enabled = false;
     if (document.pointerLockElement) document.exitPointerLock();
@@ -515,6 +527,10 @@
       'The Silent One comes for anyone who stays silent for 30 seconds. Make a small sound — click your flashlight or take a step.',
       'Hiding is silent too. Don\'t wait out Siren Head forever.',
     ] },
+    moth: { title: 'YOU STARED TOO LONG', tips: [
+      'Moths shriek if your light stays on them for 2 seconds. Sweep your beam past them.',
+      'A moth\'s shriek takes 10 HP and tells Siren Head exactly where to look.',
+    ] },
     tenant: { title: 'YOU OVERSTAYED YOUR WELCOME', tips: [
       'The Tenant takes 30 HP every time it throws you out. Leave before the red bar fills.',
       'Your health never comes back. Every hit counts.',
@@ -532,7 +548,8 @@
     A.setTenant(0);
     if (document.pointerLockElement) document.exitPointerLock();
     A.playMusic(null, 0.5);
-    if (cause === 'silent') { A.silentHit(); A.setSilentOne(1); } else A.tenantScream();
+    if (cause === 'silent') { A.silentHit(); A.setSilentOne(1); } else if (cause === 'tenant') A.tenantScream();
+    A.setMothFlutter(0);
     $('damage').style.transition = 'opacity 0.3s'; $('damage').style.opacity = 1;
   }
   function onCaught() {
@@ -716,6 +733,7 @@
       gameTime += dt;
       player.update(dt, gameTime);
       siren.update(dt, player, gameTime);
+      if (state === 'play') moths.update(dt, player, camera, gameTime);
       world.update(dt, gameTime);
       updateHUD();
       updateHintUI();
@@ -819,7 +837,7 @@
     gate.addEventListener('click', leaveGate);
     window.addEventListener('keydown', leaveGate);
     // expose for debugging
-    LO.debug = { setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, startGame, startEnding, beginPlay };
+    LO.debug = { setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, get moths() { return moths; }, startGame, startEnding, beginPlay };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
