@@ -135,11 +135,11 @@
     player.hint = showHint;
     player.onPhoto = onPhoto;
     player.onDamage = (amount, cause) => {
-      if (player.health > 0) A.hurt();
+      if (player.health > 0 && cause !== 'tenant') A.hurt();
       const d = $('damage');
       d.style.transition = 'none'; d.style.opacity = 0.9;
       setTimeout(() => { d.style.transition = 'opacity 0.8s'; d.style.opacity = 0; }, 60);
-      if (cause === 'silent') A.silentHit();
+      if (cause === 'silent' || cause === 'tenant') A.silentHit();
     };
     player.onDeath = cause => dieBy(cause);
     player.onExposure = kind => {

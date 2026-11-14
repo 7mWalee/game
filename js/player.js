@@ -161,6 +161,15 @@
       // THE TENANT: something already lives in every hiding spot.
       // Stay too long and it throws you out.
       if (!this.calm) this.hideTime += dt;
+      // once its eyes are open it hurts you every second, harder the closer it gets
+      const eyeK = (this.hideTime / TENANT_LIMIT - 0.25) / 0.75;
+      if (eyeK > 0 && !this.calm) {
+        this.tenantTick = (this.tenantTick || 0) - dt;
+        if (this.tenantTick <= 0) {
+          this.tenantTick = 1;
+          this.damage(Math.round(2 + eyeK * 6), 'tenant');
+        }
+      } else this.tenantTick = 1;
       if (this.hideTime >= TENANT_LIMIT) { this.damage(9999, 'tenant'); }   // it reached you
       this.panting = Math.max(0, this.panting - dt * 0.5);
     } else {

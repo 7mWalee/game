@@ -10,7 +10,7 @@ Open `index.html` in a modern browser (Chrome, Edge or Firefox). You don't need 
 - **Siren Head is blind and hunts by sound.** Walking, running, jumping, panting, your camera shutter and the buzz of your flashlight can all give you away.
 - If he hears you, he comes to investigate. Keep making noise and he gets **angry**. If he's angry and you're making noise when he reaches you, he gets you.
 - **Silence keeps you safe.** Stand still with the light off, or hide in a dumpster or locker. He can't catch you while you're completely silent.
-- **Don't hide too long.** Something called **the Tenant** lives in the hiding spots. Its two glowing eyes open in the dark and creep closer the longer you stay. If they reach you (about 14 seconds), you die.
+- **Don't hide too long.** Something called **the Tenant** lives in the hiding spots. Its two glowing eyes open in the dark and creep closer the longer you stay, hurting you every second (2 HP at first, up to 8 HP). If they reach you (about 14 seconds), you die.
 - **You have 100 HP, and it never comes back.**
 - **Noise stacks.** Every source adds up: walking with your flashlight on is louder than either alone.
 - **Echolocation:** about once a minute Siren Head pings the town. It finds you even if you're silent or hidden, and he creeps closer. Each ping is more accurate.
