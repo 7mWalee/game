@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>The Loud One</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="game-root">
+  <!-- three.js canvas is inserted here -->
+</div>
+
+<!-- Post-process style overlays -->
+<div id="vignette"></div>
+<div id="grain"></div>
+<div id="damage"></div>
+<div id="fade"></div>
+
+<!-- Click-to-start gate (browsers need a click before audio can play) -->
+<div id="gate" class="screen active">
+  <div class="gate-inner">
+    <div class="gate-warning">WARNING</div>
+    <p>This game contains loud sounds, jump scares and flashing lights.<br>Headphones recommended.</p>
+    <div class="blink">CLICK OR PRESS ANY KEY</div>
+  </div>
+</div>
+
+<!-- Main title screen -->
+<div id="title" class="screen">
+  <div class="title-wrap">
+    <h1 class="game-title" data-text="THE LOUD ONE">THE LOUD ONE</h1>
+    <div class="subtitle-line">Hollow Creek went quiet. Something made it that way.</div>
+    <nav class="menu" id="main-menu">
+      <button data-action="play">PLAY</button>
+      <button data-action="graphics">GRAPHICS</button>
+      <button data-action="audio">AUDIO &amp; CONTROLS</button>
+      <button data-action="howto">HOW TO PLAY</button>
+    </nav>
+  </div>
+  <div class="title-footer">v1.0 &nbsp;·&nbsp; stay quiet</div>
+</div>
+
+<!-- Graphics options -->
+<div id="graphics" class="screen panel-screen">
+  <div class="panel">
+    <h2>GRAPHICS</h2>
+    <div class="opt-list" id="graphics-list"></div>
+    <div class="panel-buttons">
+      <button data-action="back">BACK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Audio & controls options -->
+<div id="audio" class="screen panel-screen">
+  <div class="panel">
+    <h2>AUDIO &amp; CONTROLS</h2>
+    <div class="opt-list" id="audio-list"></div>
+    <div class="panel-buttons">
+      <button data-action="back">BACK</button>
+    </div>
+  </div>
+</div>
+
+<!-- How to play -->
+<div id="howto" class="screen panel-screen">
+  <div class="panel howto">
+    <h2>HOW TO PLAY</h2>
+    <p>Siren Head levelled Hollow Creek. Nobody believes you. Photograph <b>4 pieces of evidence</b> and the police will send in the heavy equipment.</p>
+    <p><b>He is blind. He hunts by sound.</b> Running, jumping, panting and even the buzz of your flashlight can give you away. If he hears you he will come looking. If he gets <b>angry</b> and you keep making noise, he will get you.</p>
+    <p><b>Silence is safety.</b> Stand still with your flashlight off, or hide in a dumpster or locker, and he can't find you.</p>
+    <table class="keys">
+      <tr><td>W A S D</td><td>Move</td></tr>
+      <tr><td>Mouse</td><td>Look</td></tr>
+      <tr><td>Shift</td><td>Sprint (loud, uses stamina)</td></tr>
+      <tr><td>Space</td><td>Jump (very loud)</td></tr>
+      <tr><td>C / Ctrl</td><td>Crouch (quiet)</td></tr>
+      <tr><td>F</td><td>Flashlight (buzzes)</td></tr>
+      <tr><td>Right mouse / Q</td><td>Raise camera</td></tr>
+      <tr><td>Left mouse</td><td>Take photo (while camera raised)</td></tr>
+      <tr><td>E</td><td>Hide / interact / pick up</td></tr>
+      <tr><td>Esc</td><td>Pause</td></tr>
+    </table>
+    <div class="panel-buttons">
+      <button data-action="back">BACK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cutscene overlay -->
+<div id="cutscene" class="screen">
+  <div class="letterbox top"></div>
+  <div class="letterbox bottom"></div>
+  <div id="cut-caption"></div>
+  <div class="skip-hint">Hold SPACE (or touch the screen) to skip</div>
+  <div id="skip-bar"><div></div></div>
+</div>
+
+<!-- Subtitles (shared between cutscenes and gameplay) -->
+<div id="subtitles"></div>
+
+<!-- In-game HUD -->
+<div id="hud" class="screen">
+  <div id="crosshair"></div>
+  <div id="prompt"></div>
+  <div id="hint"></div>
+  <div id="objective">
+    <div class="obj-title">EVIDENCE</div>
+    <div class="obj-count"><span id="ev-count">0</span> / <span id="ev-need">4</span></div>
+    <div class="obj-list" id="ev-list"></div>
+  </div>
+  <div id="status-box">
+    <div id="sh-status" class="calm">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 2.6 1.2 3.9 2.2 5 .8.9 1.5 1.6 1.7 2.9.3 2.4 1.7 5.1 4.6 5.1a4.5 4.5 0 0 0 4.5-4.5h-2a2.5 2.5 0 0 1-2.5 2.5c-1.6 0-2.4-1.7-2.6-3.4-.3-2-1.3-3-2.2-4C7.8 12.6 7 11.7 7 9a5 5 0 0 1 10 0h2a7 7 0 0 0-7-7Zm0 4a3 3 0 0 0-3 3h2a1 1 0 1 1 2 0c0 .6-.3.9-.8 1.4-.6.6-1.2 1.3-1.2 2.6h2c0-.5.2-.7.7-1.2.6-.6 1.3-1.4 1.3-2.8a3 3 0 0 0-3-3Z"/></svg>
+      <span id="sh-text">HE CAN'T HEAR YOU</span>
+    </div>
+  </div>
+  <div id="bars">
+    <div class="bar-row">
+      <label>NOISE</label>
+      <div class="bar noise"><div id="noise-fill"></div><div class="bar-mark" style="left:35%"></div></div>
+    </div>
+    <div class="bar-row">
+      <label>STAMINA</label>
+      <div class="bar stamina"><div id="stamina-fill"></div></div>
+    </div>
+    <div class="bar-row">
+      <label>BATTERY</label>
+      <div class="bar battery"><div id="battery-fill"></div></div>
+    </div>
+  </div>
+  <div id="minimap-hint"></div>
+  <!-- Touch controls (shown on phones / tablets) -->
+  <div id="touch">
+    <div id="t-look"></div>
+    <div id="t-stick"><div id="t-knob"></div></div>
+    <button class="t-btn" id="t-pause" data-t="pause" aria-label="Pause">II</button>
+    <div id="t-buttons">
+      <button class="t-btn big" id="t-shutter" data-t="shutter">SNAP</button>
+      <button class="t-btn" data-t="camera" id="t-camera">CAMERA</button>
+      <button class="t-btn" data-t="use" id="t-use">HIDE</button>
+      <button class="t-btn" data-t="light" id="t-light">LIGHT</button>
+      <button class="t-btn" data-t="crouch" id="t-crouch">CROUCH</button>
+      <button class="t-btn" data-t="jump">JUMP</button>
+      <button class="t-btn" data-t="sprint" id="t-sprint">SPRINT</button>
+    </div>
+  </div>
+</div>
+
+<!-- Camera viewfinder -->
+<div id="viewfinder" class="screen">
+  <div class="vf-corner tl"></div><div class="vf-corner tr"></div>
+  <div class="vf-corner bl"></div><div class="vf-corner br"></div>
+  <div class="vf-center"></div>
+  <div class="vf-rec">● REC</div>
+  <div class="vf-info" id="vf-info">NO SUBJECT</div>
+  <div class="vf-film" id="vf-film">FILM ∞</div>
+</div>
+<div id="flash"></div>
+
+<!-- Photo result popup -->
+<div id="photo-pop">
+  <div class="polaroid">
+    <img id="photo-img" alt="">
+    <div id="photo-caption"></div>
+  </div>
+</div>
+
+<!-- Hiding overlay -->
+<div id="hide-overlay" class="screen">
+  <div class="slats"></div>
+  <div class="hide-text">HIDING — press E to leave</div>
+</div>
+
+<!-- Pause -->
+<div id="pause" class="screen">
+  <div class="panel small">
+    <h2>PAUSED</h2>
+    <nav class="menu">
+      <button data-action="resume">RESUME</button>
+      <button data-action="graphics">GRAPHICS</button>
+      <button data-action="audio">AUDIO &amp; CONTROLS</button>
+      <button data-action="quit">QUIT TO TITLE</button>
+    </nav>
+  </div>
+</div>
+
+<!-- Death -->
+<div id="death" class="screen">
+  <div class="death-inner">
+    <h2>YOU WERE TOO LOUD</h2>
+    <p id="death-tip">He only hunts what he can hear.</p>
+    <nav class="menu">
+      <button data-action="retry">TRY AGAIN</button>
+      <button data-action="quit">QUIT TO TITLE</button>
+    </nav>
+  </div>
+</div>
+
+<!-- Ending / credits -->
+<div id="credits" class="screen">
+  <div class="credits-roll" id="credits-roll">
+    <h1>THE LOUD ONE</h1>
+    <p class="c-big">Siren Head was taken into custody at 6:12 AM.</p>
+    <p>Hollow Creek remains closed to the public.</p>
+    <p>The sirens have not been heard since.</p>
+    <br><br>
+    <p class="c-head">A game about staying quiet</p>
+    <p>Design, code, audio &amp; voices — generated with Claude Code</p>
+    <p>Rendering — three.js</p>
+    <p>Voices — your browser's speech synthesizer</p>
+    <br><br>
+    <p class="c-big">THANK YOU FOR PLAYING</p>
+    <br>
+    <nav class="menu"><button data-action="quit">BACK TO TITLE</button></nav>
+  </div>
+</div>
+
+<div id="fps"></div>
+
+<script src="js/lib/three.min.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/world.js"></script>
+<script src="js/sirenhead.js"></script>
+<script src="js/player.js"></script>
+<script src="js/cutscenes.js"></script>
+<script src="js/main.js"></script>
+<script src="js/touch.js"></script>
+</body>
+</html>
