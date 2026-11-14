@@ -126,9 +126,21 @@
     s.onended = () => { if (ringSrc === s) ringSrc = null; };
   };
   A.sampleNames = () => Object.keys(samples);
-  // the death noise (one-shot)
-  A.playDeathNoise = function () {
-    if (!ctx || !samples.deathnoise) return;
+  // the death sound. fast = the short version (noise + TV-off), otherwise the long recording.
+  let deathT0 = null;
+  A.deathElapsed = function () { return (ctx && deathT0 !== null) ? Math.max(0, ctx.currentTime - deathT0) : null; };
+  A.playDeathNoise = function (fast) {
+    deathT0 = null;
+    if (!ctx) return;
+    if (!fast) {
+      if (!samples.deathlong) return;
+      const s = ctx.createBufferSource(); s.buffer = samples.deathlong;
+      const g = ctx.createGain(); g.gain.value = 1.35 * Math.min(1, S.master * 1.25) * Math.max(0.4, S.sfx);
+      s.connect(g); g.connect(ctx.destination);
+      deathT0 = ctx.currentTime + 0.02; s.start(deathT0);
+      return;
+    }
+    if (!samples.deathnoise) return;
     const s = ctx.createBufferSource(); s.buffer = samples.deathnoise;
     // straight to the speakers (skipping the game's compressor) so nothing squashes it
     // pushed hard into a soft saturator: louder than anything else in the game, without harsh clipping
@@ -141,6 +153,7 @@
     s.connect(drive); drive.connect(sat); sat.connect(out); out.connect(ctx.destination);
     const t0 = ctx.currentTime;
     s.start(t0);
+    deathT0 = t0;
     // ...and the TV switching off picks up exactly where the noise ends (1.40s), so its
     // pop lands as the screen collapses (2.25s after death)
     if (samples.tvoff) {

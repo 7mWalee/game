@@ -25,6 +25,7 @@ window.LO = window.LO || {};
     master: 0.8, music: 0.6, sfx: 0.9, voice: 1.0, subtitles: true, tts: true,
     // controls
     sensitivity: 1.0, invertY: false,
+    fastDeath: false,
   }, PRESETS.medium);
 
   const S = Object.assign({}, DEFAULTS);
@@ -69,6 +70,8 @@ window.LO = window.LO || {};
     { key: 'voice', label: 'Voices', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
     { key: 'tts', label: 'Spoken Voice Lines', desc: 'Off shows subtitles only', type: 'choice', values: [false, true], labels: ['Off', 'On'] },
     { key: 'subtitles', label: 'Subtitles', type: 'choice', values: [false, true], labels: ['Off', 'On'] },
+    { section: 'GAMEPLAY' },
+    { key: 'fastDeath', label: 'Fast Death', desc: 'Shorter death sequence before the death screen', type: 'choice', values: [false, true], labels: ['Off', 'On'] },
     { section: 'CONTROLS' },
     { key: 'sensitivity', label: 'Mouse Sensitivity', type: 'range', min: 0.2, max: 3, step: 0.05, fmt: v => v.toFixed(2) + 'x' },
     { key: 'invertY', label: 'Invert Y', type: 'choice', values: [false, true], labels: ['Off', 'On'] },

@@ -604,7 +604,13 @@
 
   // ---------- death ----------
   let dieT = 0;
-  let dieCause = 'siren';
+  let dieCause = 'siren', deathP = null;
+  function startDeathSound() {
+    deathP = LO.TVFX.profile(S.fastDeath);
+    A.playDeathNoise(S.fastDeath);
+  }
+  // seconds since death, from the audio clock when possible so pictures and sound stay locked
+  function deathClock(dt) { const a = A.deathElapsed(); return a !== null ? a : dieT + dt; }
   const DEATHS = {
     siren: { title: 'YOU WERE TOO LOUD', tips: [
       'He only hunts what he can hear. Stand still and switch off your light.',
@@ -638,7 +644,7 @@
     A.setTenant(0);
     if (document.pointerLockElement) document.exitPointerLock();
     A.playMusic(null, 0.5);
-    A.playDeathNoise();
+    startDeathSound();
     A.setMothFlutter(0);
   }
   function onCaught() {
@@ -656,19 +662,20 @@
     siren.speedNow = 0;
     // turn to face the player
     siren.yaw = Math.atan2(player.pos.x - siren.pos.x, player.pos.z - siren.pos.z);
-    A.playDeathNoise();
+    startDeathSound();
     A.playMusic(null, 0.5);
   }
   function updateDying(dt) {
-    dieT += dt;
-    LO.TVFX.dying(dieT, dieCause);    // red flood + the creature, red static, grey static
+    dieT = deathClock(dt);
+    const P = deathP || LO.TVFX.profile(S.fastDeath);
+    LO.TVFX.dying(dieT, dieCause, P);    // red flood + the creature, red static, grey static
     if (dieCause !== 'siren') {
       // collapse to the ground
       const k = Math.min(1, dieT / 1.4);
       camera.position.y = Math.max(0.25, camera.position.y - dt * 1.4);
       camera.rotation.z = k * 1.2;
       camera.rotation.x = player.pitch * (1 - k) + 0.2 * k;
-      if (dieT > 2.25) finishDeath();
+      if (dieT > P.end) finishDeath();
       return;
     }
     siren.neckDip = Math.min(1, dieT) * -0.5;
@@ -679,7 +686,7 @@
     const m = new THREE.Matrix4().lookAt(cam.position, hp, new THREE.Vector3(0, 1, 0));
     const q = new THREE.Quaternion().setFromRotationMatrix(m);
     cam.quaternion.slerp(q, Math.min(1, dt * 6));
-    if (dieT > 2.25 && state === 'dying') finishDeath();
+    if (dieT > P.end && state === 'dying') finishDeath();
   }
   function finishDeath() {
     {
@@ -706,7 +713,7 @@
         clearTimeout(deathTimer);
         if (!A.playDeathMusic(kickToTitle)) deathTimer = setTimeout(kickToTitle, 58000);
         $('fade').style.transition = 'none'; $('fade').style.opacity = 0;
-      });
+      }, null, (() => { const P = deathP || LO.TVFX.profile(S.fastDeath); const now = A.deathElapsed(); return now === null ? P.roomAt - P.end - 0.16 : P.roomAt - now - 0.16; })());
     }
   }
 

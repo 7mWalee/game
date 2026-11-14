@@ -15,7 +15,13 @@
   let nImg = null;
 
   let phase = 'none', t = 0, onBlack = null, onDone = null;
-  const OFF = 0.16, BLACK = 1.9, ON = 0.65;
+  const OFF = 0.16, ON = 0.65;
+  let BLACK = 1.9;
+  // when each stage happens (seconds after death). fast = the sped-up version, slow = the long recording
+  const PROFILES = {
+    fast: { silIn: 0.15, silFade: 1.3, silGone: 1.9, statIn: 1.2, statFull: 1.9, grey: 1.9, end: 2.25, roomAt: 4.31 },
+    slow: { silIn: 0.2, silFade: 2.9, silGone: 3.8, statIn: 2.6, statFull: 3.8, grey: 4.2, end: 5.02, roomAt: 8.78 },
+  };
 
 
   function size() {
@@ -85,7 +91,9 @@
 
   const FX = {
     // called every frame while the player is dying (k: seconds since death)
-    dying(k, cause) {
+    profile(fast) { return fast ? PROFILES.fast : PROFILES.slow; },
+    dying(k, cause, P) {
+      P = P || PROFILES.fast;
       phase = 'dying';
       const W = cv.width, H = cv.height;
       g.clearRect(0, 0, W, H);
@@ -96,10 +104,10 @@
       gr.addColorStop(0, 'rgba(200,20,10,0.15)'); gr.addColorStop(1, `rgba(40,0,0,${0.7 * red})`);
       g.fillStyle = gr; g.fillRect(0, 0, W, H);
       // 2) the thing that got you, burned into the red
-      if (k > 0.15 && k < 1.9) {
-        const a = Math.min(1, (k - 0.15) / 0.12) * (k > 1.3 ? Math.max(0, 1 - (k - 1.3) / 0.6) : 1);
+      if (k > P.silIn && k < P.silGone) {
+        const a = Math.min(1, (k - P.silIn) / 0.12) * (k > P.silFade ? Math.max(0, 1 - (k - P.silFade) / (P.silGone - P.silFade)) : 1);
         const jx = (Math.random() - 0.5) * W * 0.012, jy = (Math.random() - 0.5) * H * 0.012;
-        const sc = Math.min(W, H) * (0.9 + (k - 0.15) * 0.12);
+        const sc = Math.min(W, H) * (0.9 + (k - P.silIn) / (P.silGone - P.silIn) * 0.25);
         const draw = SIL[cause] || SIL.siren;
         // a smeared ghost image behind it, for that distorted, burned-in look
         g.save(); g.globalAlpha = a * 0.35; g.translate(W / 2 - jx * 4 + W * 0.012, H / 2 + jy * 3); g.scale(1.06, 1.06); draw(g, sc, k); g.restore();
@@ -113,9 +121,9 @@
         g.restore();
       }
       // 3) red static creeps in, then 4) it turns grey
-      const stat = Math.max(0, Math.min(1, (k - 1.2) / 0.7));
+      const stat = Math.max(0, Math.min(1, (k - P.statIn) / (P.statFull - P.statIn)));
       if (stat > 0) {
-        makeNoise(k < 1.9 ? 1 : 0);
+        makeNoise(k < P.grey ? 1 : 0);
         g.globalAlpha = stat;
         g.imageSmoothingEnabled = false;
         g.drawImage(noise, 0, 0, W, H);
@@ -123,8 +131,9 @@
       }
     },
     // switch off → black → (callback swaps to the death room) → flick back on
-    off(blackCb, doneCb) {
+    off(blackCb, doneCb, blackDur) {
       phase = 'off'; t = 0; onBlack = blackCb; onDone = doneCb;
+      BLACK = blackDur === undefined ? 1.9 : Math.max(0.2, blackDur);
     },
     update(dt) {
       if (phase === 'none' || phase === 'dying') return;
