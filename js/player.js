@@ -314,8 +314,8 @@
     if (this.exposure >= EXPO.LUNGE) {
       this.exposure = 0;
       this.cameraUp = false;
-      this.onExposure && this.onExposure('lunge');
       this.damage(EXPO.LUNGE_DMG, 'exposure');
+      if (this.health > 0) this.onExposure && this.onExposure('lunge');
     }
     this.vfTimer -= dt;
     if (this.cameraUp && this.vfTimer <= 0) { this.vfTimer = 0.12; this.vfTarget = this.findEvidence(); }
@@ -381,8 +381,8 @@
     this.spike = Math.max(this.spike, NOISE.kicked);
     this.shake = Math.max(this.shake, 0.9);
     this.hideTime = TENANT_LIMIT * 0.6;              // still restless if you dive straight back in
-    this.onKicked && this.onKicked();
     this.damage(TENANT_DAMAGE, 'tenant');
+    if (this.health > 0) this.onKicked && this.onKicked();
   };
 
   // ------------------------------------------------------------
@@ -514,8 +514,8 @@
     if (!this.calm && this.exposure >= EXPO.SHOW) {
       // photographing the Exposure banishes it — but the flash burns you
       this.exposure = 0;
-      this.onExposure && this.onExposure('banish');
       this.damage(EXPO.BANISH_DMG, 'exposure');
+      if (this.health > 0) this.onExposure && this.onExposure('banish');
     } else if (!ev && !this.calm) {
       // wasted flashes (using the camera as a light) draw it in faster
       this.exposure += EXPO.WASTED;

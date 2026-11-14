@@ -690,7 +690,6 @@
       A.setStillness(false); document.body.classList.remove('still');
       $('silent-one').style.opacity = 0;
       // the picture switches off like an old TV, then flicks back on in the death room
-      A.tvOff();
       LO.TVFX.off(() => {
         hideAllScreens();
         show('death');
