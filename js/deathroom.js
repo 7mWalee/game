@@ -289,17 +289,19 @@
     this.sketchTex = new THREE.CanvasTexture(this.sketchCanvas);
     this.tipsTex = new THREE.CanvasTexture(this.tipsCanvas);
     const pageGeo = new THREE.PlaneGeometry(BW, BD);
-    const right = new THREE.Mesh(pageGeo, new THREE.MeshLambertMaterial({ map: this.tipsTex }));
+    const right = new THREE.Mesh(pageGeo, new THREE.MeshBasicMaterial({ map: this.tipsTex, color: 0xf2ece0 }));
     right.rotation.x = -Math.PI / 2; right.position.set(BW / 2, 0.02, 0); book.add(right);
-    const block = new THREE.Mesh(new THREE.BoxGeometry(BW, 0.02, BD), new THREE.MeshLambertMaterial({ color: 0xd9d2bf }));
+    const block = new THREE.Mesh(new THREE.BoxGeometry(BW, 0.02, BD), new THREE.MeshBasicMaterial({ color: 0x9c9482 }));
     block.position.set(BW / 2, 0.009, 0); book.add(block);
     const pivot = this.coverPivot = new THREE.Group(); pivot.position.y = 0.03; book.add(pivot);
-    const leather = new THREE.MeshLambertMaterial({ color: 0x3b2418 });
+    const leather = new THREE.MeshBasicMaterial({ color: 0x2e1c12 });
     const front = new THREE.Mesh(pageGeo, leather); front.rotation.x = -Math.PI / 2; front.position.set(BW / 2, 0.002, 0); pivot.add(front);
-    const back = new THREE.Mesh(pageGeo, new THREE.MeshLambertMaterial({ map: this.sketchTex }));
+    const back = new THREE.Mesh(pageGeo, new THREE.MeshBasicMaterial({ map: this.sketchTex, color: 0xf2ece0 }));
     back.rotation.x = Math.PI / 2; back.rotation.z = Math.PI; back.position.set(BW / 2, -0.002, 0); pivot.add(back);
-    book.position.set(-0.62, 0.81, 0.02); book.rotation.y = 0.26; book.scale.setScalar(1.3);
-    scene.add(book);
+    // held up in front of you, like someone is reading it to you
+    scene.add(this.camera);
+    this.camera.add(book);
+    book.rotation.set(Math.PI / 2 - 0.12, 0.16, 0.04);
 
     // lights: weak overhead lamp and the TV's glow
     scene.add(new THREE.AmbientLight(0x404040, 0.25));
@@ -334,7 +336,7 @@
     paper(g, 512, 680);
     g.fillStyle = '#1b1b1b'; g.font = `bold 58px ${HAND}`; g.fillText(E.name, 34, 92);
     g.strokeStyle = '#1b1b1b'; g.lineWidth = 3; g.beginPath(); g.moveTo(34, 104); g.lineTo(34 + g.measureText(E.name).width, 106); g.stroke();
-    g.font = `bold 40px ${HAND}`;
+    g.font = `bold 44px ${HAND}`;
     let y = 175;
     E.tips.forEach(t => {
       const lines = wrap(g, '- ' + t, 440);
@@ -367,7 +369,13 @@
     const ease = 1 - Math.pow(1 - k, 3);
     this.camera.aspect = aspect; this.camera.fov = aspect < 1 ? 70 : 50; this.camera.updateProjectionMatrix();
     this.camera.position.set(-0.12 + Math.sin(t * 0.3) * 0.03, 1.85 - ease * 0.2, 2.0 - ease * 0.5);
-    this.camera.lookAt(-0.1, 0.95, -0.3);
+    this.camera.lookAt(0.05, 1.1, -0.5);
+    // the held notebook: big and to the left on wide screens, lower and centred on phones
+    const portrait = aspect < 1;
+    const bob = Math.sin(t * 1.3) * 0.006, sway = Math.sin(t * 0.8) * 0.012;
+    if (portrait) { this.book.position.set(-0.02, -0.2 + bob, -0.9); this.book.scale.setScalar(0.62); }
+    else { this.book.position.set(-0.3 + sway, 0.03 + bob, -0.92); this.book.scale.setScalar(0.62); }
+    this.book.rotation.z = 0.04 + Math.sin(t * 0.9) * 0.01;
     // the notebook opens
     const o = Math.max(0, Math.min(1, (t - 1.2) / 1.3));
     this.coverPivot.rotation.z = (1 - Math.pow(1 - o, 3)) * Math.PI * 0.995;
