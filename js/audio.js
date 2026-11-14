@@ -125,12 +125,14 @@
     ringSrc = s;
     s.onended = () => { if (ringSrc === s) ringSrc = null; };
   };
+  A.sampleNames = () => Object.keys(samples);
   // the death noise (one-shot)
   A.playDeathNoise = function () {
     if (!ctx || !samples.deathnoise) return;
     const s = ctx.createBufferSource(); s.buffer = samples.deathnoise;
-    const g = ctx.createGain(); g.gain.value = 1.1;
-    s.connect(g); g.connect(sfxBus); s.start();
+    // straight to the speakers (skipping the game's compressor) so nothing squashes it
+    const g = ctx.createGain(); g.gain.value = 1.0 * S.master * Math.max(0.3, S.sfx);
+    s.connect(g); g.connect(ctx.destination); s.start();
   };
   A.stopRinging = function () { if (ringSrc) { try { ringSrc.stop(); } catch (e) {} ringSrc = null; } };
 
