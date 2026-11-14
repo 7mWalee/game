@@ -20,6 +20,49 @@
   let endingQueued = false;
   let parkedCar = null;
   let skipHeld = 0;
+  // ---- hint system: unlocks after 3 minutes without finding evidence ----
+  const HINT_DELAY = 180, HINT_SHOW = 15;
+  let lastEvidenceTime = 0, hintUntil = 0, hintTarget = null;
+  function hintReady() { return state === 'play' && !endingQueued && gameTime - lastEvidenceTime >= HINT_DELAY; }
+  function useHint() {
+    if (!hintReady()) {
+      if (state === 'play') showHint('Keep looking. A hint unlocks after 3 minutes without finding evidence.');
+      return;
+    }
+    // closest piece of evidence that hasn't been photographed yet
+    let best = null, bd = Infinity;
+    world.evidence.forEach(e => {
+      if (e.found) return;
+      const d = Math.hypot(e.pos.x - player.pos.x, e.pos.z - player.pos.z);
+      if (d < bd) { bd = d; best = e; }
+    });
+    if (!best) return;
+    hintTarget = best;
+    hintUntil = gameTime + HINT_SHOW;
+    lastEvidenceTime = gameTime;           // next hint needs another 3 minutes
+    A.pickup();
+  }
+  LO.useHint = useHint;
+  function updateHintUI() {
+    const btn = $('hint-btn');
+    const ready = hintReady();
+    btn.classList.toggle('ready', ready);
+    if (ready) btn.textContent = LO.isTouch ? 'HINT' : 'HINT [H]';
+    else {
+      const left = Math.max(0, Math.ceil(HINT_DELAY - (gameTime - lastEvidenceTime)));
+      btn.textContent = `HINT ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    }
+    const tb = $('t-hint'); if (tb) { tb.textContent = btn.textContent; tb.classList.toggle('on', ready); }
+    const box = $('hint-arrow');
+    if (hintTarget && gameTime < hintUntil && !hintTarget.found) {
+      box.style.display = 'block';
+      const dx = hintTarget.pos.x - player.pos.x, dz = hintTarget.pos.z - player.pos.z;
+      // angle relative to where the player is facing (camera looks down -z at yaw 0)
+      let a = Math.atan2(-dx, -dz) - player.yaw;
+      $('hint-needle').style.transform = `rotate(${-a}rad)`;
+      $('hint-label').textContent = `${hintTarget.name} — ${Math.round(Math.hypot(dx, dz))} m`;
+    } else box.style.display = 'none';
+  }
   const seenHints = {};
 
   // ============================================================
@@ -60,7 +103,7 @@
     if (siren) siren.dispose();
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x05070a);
-    scene.fog = new THREE.FogExp2(0x070a10, 0.022);
+    scene.fog = new THREE.FogExp2(0x020305, 0.022);
     if (!camera) camera = new THREE.PerspectiveCamera(S.fov, window.innerWidth / window.innerHeight, 0.1, 1100);
     camera.children.slice().forEach(c => camera.remove(c));
     world = LO.World.build(scene);
@@ -208,6 +251,7 @@
     siren.forceLean = 0.2;
     siren.neckDip = 0; siren.armRaise = 0;
     siren.root.rotation.x = 0;
+    world.hemi.intensity = 0.3; world.moonLight.intensity = 0.35;
   }
   function updateTitle(dt) {
     titleT += dt;
@@ -254,6 +298,7 @@
     siren.spawnFar();
     player.reset(world.spawn, Math.PI);
     gameTime = 0;
+    lastEvidenceTime = 0; hintUntil = 0;
     updateEvidenceUI();
   }
 
@@ -300,6 +345,8 @@
     siren.spawnFar();
     siren.state = 'wander'; siren.path = [];
     player.reset(world.spawn, Math.PI);
+    world.hemi.intensity = world.baseLight.hemi; world.moonLight.intensity = world.baseLight.moon;
+    lastEvidenceTime = gameTime; hintUntil = 0;
     player.enabled = true;
     state = 'play';
     show('hud');
@@ -363,6 +410,7 @@
     if (!ev) return;
     ev.found = true;
     evidenceCount++;
+    lastEvidenceTime = gameTime; hintUntil = 0;
     A.evidenceSting();
     updateEvidenceUI();
     A.say('player', EVIDENCE_LINES[Math.min(EVIDENCE_LINES.length - 1, evidenceCount - 1)]);
@@ -540,6 +588,7 @@
       siren.update(dt, player, gameTime);
       world.update(dt, gameTime);
       updateHUD();
+      updateHintUI();
       // music & heartbeat follow the danger
       const d = siren.distToPlayer || 999;
       const near = Math.max(0, 1 - d / 70);
@@ -599,11 +648,13 @@
       }
     });
     window.addEventListener('keydown', e => {
+      if (e.code === 'KeyH' && state === 'play') useHint();
       if (e.code === 'Escape') {
         if (state === 'paused' && $('pause').classList.contains('active')) resume();
         else if (document.querySelector('.panel-screen.active')) closePanel();
       }
     });
+    $('hint-btn').addEventListener('click', e => { e.stopPropagation(); useHint(); });
     window.addEventListener('resize', applyDisplay);
     LO.events.addEventListener('settings', () => applyDisplay());
   }
@@ -636,7 +687,7 @@
     gate.addEventListener('click', leaveGate);
     window.addEventListener('keydown', leaveGate);
     // expose for debugging
-    LO.debug = { get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, startGame, startEnding, beginPlay };
+    LO.debug = { setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, startGame, startEnding, beginPlay };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

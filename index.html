@@ -83,6 +83,7 @@
       <tr><td>Right mouse / Q</td><td>Raise camera</td></tr>
       <tr><td>Left mouse</td><td>Take photo (while camera raised)</td></tr>
       <tr><td>E</td><td>Hide / interact / pick up</td></tr>
+      <tr><td>H</td><td>Hint (unlocks after 3 minutes without finding evidence)</td></tr>
       <tr><td>Esc</td><td>Pause</td></tr>
     </table>
     <div class="panel-buttons">
@@ -134,6 +135,8 @@
     </div>
   </div>
   <div id="minimap-hint"></div>
+  <button id="hint-btn" type="button">HINT 3:00</button>
+  <div id="hint-arrow"><div id="hint-needle">▲</div><div id="hint-label"></div></div>
   <!-- Touch controls (shown on phones / tablets) -->
   <div id="touch">
     <div id="t-look"></div>
@@ -147,6 +150,7 @@
       <button class="t-btn" data-t="crouch" id="t-crouch">CROUCH</button>
       <button class="t-btn" data-t="jump">JUMP</button>
       <button class="t-btn" data-t="sprint" id="t-sprint">SPRINT</button>
+      <button class="t-btn" data-t="hint" id="t-hint">HINT</button>
     </div>
   </div>
 </div>

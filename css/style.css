@@ -349,3 +349,17 @@ body.touch #sh-status { font-size: 12px; padding: 4px 8px; }
 body.touch .obj-count { font-size: 26px; }
 body.touch .vf-rec, body.touch .vf-film { display: none; }
 body.touch #subtitles { bottom: 30vh; }
+
+/* ---------- hint ---------- */
+#hint-btn {
+  position: absolute; bottom: 112px; left: 24px; pointer-events: auto; cursor: pointer;
+  font-family: var(--font-title); letter-spacing: 2px; font-size: 13px; padding: 5px 12px;
+  color: #777; background: rgba(0,0,0,0.45); border: 1px solid #444;
+}
+#hint-btn.ready { color: #ffd34d; border-color: #ffd34d; animation: pulse-hint 1.2s infinite alternate; }
+@keyframes pulse-hint { from { box-shadow: 0 0 0 rgba(255,211,77,0); } to { box-shadow: 0 0 14px rgba(255,211,77,0.6); } }
+#hint-arrow { display: none; position: absolute; top: 24%; left: 50%; transform: translateX(-50%); text-align: center; text-shadow: 0 0 6px #000; }
+#hint-needle { font-size: 38px; color: #ffd34d; line-height: 1; transition: transform 0.1s linear; display: inline-block; }
+#hint-label { font-size: 14px; color: #ffd34d; letter-spacing: 1px; margin-top: 4px; }
+body.touch #hint-btn { display: none; }
+body.touch #t-hint { grid-column: span 2; }

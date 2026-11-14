@@ -131,8 +131,8 @@
       W.stars.visible = false; W.moon.visible = false; W.moonHalo.visible = false;
       scene.fog.color.set(0x6a5a58);
       if (scene.fog.density) scene.fog.density *= 0.6;
-      W.hemi.color.set(0xb8a8a8); W.hemi.groundColor.set(0x30282a); W.hemi.intensity *= 2.2;
-      W.moonLight.color.set(0xffc49a); W.moonLight.intensity *= 2.4;
+      W.hemi.color.set(0xb8a8a8); W.hemi.groundColor.set(0x30282a); W.hemi.intensity = 0.9;
+      W.moonLight.color.set(0xffc49a); W.moonLight.intensity = 1.1;
       W.moonLight.position.set(120, 40, -160);
     }
 

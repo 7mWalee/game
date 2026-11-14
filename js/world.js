@@ -192,7 +192,7 @@
       const c = document.createElement('canvas'); c.width = 2; c.height = 256;
       const g = c.getContext('2d');
       const gr = g.createLinearGradient(0, 0, 0, 256);
-      gr.addColorStop(0, '#02030a'); gr.addColorStop(0.55, '#0a1020'); gr.addColorStop(1, '#141a24');
+      gr.addColorStop(0, '#010103'); gr.addColorStop(0.55, '#03050a'); gr.addColorStop(1, '#06080c');
       g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
       const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
       W.skyMat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, depthWrite: false });
@@ -206,7 +206,7 @@
         pts.push(Math.cos(th) * Math.sin(ph) * 850, Math.cos(ph) * 850, Math.sin(th) * Math.sin(ph) * 850);
       }
       const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-      W.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xaab4cc, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.8 }));
+      W.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xaab4cc, size: 1.4, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.45 }));
       scene.add(W.stars);
       // moon
       const moon = new THREE.Mesh(new THREE.SphereGeometry(22, 20, 14), new THREE.MeshBasicMaterial({ color: 0xd8dccc, fog: false }));
@@ -216,9 +216,11 @@
     }
 
     // ---------- lights ----------
-    W.hemi = new THREE.HemisphereLight(0x3a4a66, 0x0c0c10, simple ? 0.55 : 0.45);
+    // very dark night: the flashlight and the broken street lamps are the real light sources
+    W.baseLight = { hemi: simple ? 0.09 : 0.07, moon: simple ? 0.05 : 0.06 };
+    W.hemi = new THREE.HemisphereLight(0x2a3650, 0x050507, W.baseLight.hemi);
     scene.add(W.hemi);
-    W.moonLight = new THREE.DirectionalLight(0x8fa0c8, simple ? 0.35 : 0.5);
+    W.moonLight = new THREE.DirectionalLight(0x8fa0c8, W.baseLight.moon);
     W.moonLight.position.set(-60, 120, 110);
     if (S.shadows === 'high') {
       W.moonLight.castShadow = true;
@@ -549,10 +551,6 @@
         screen.position.z = 0.26; mon.add(casing, screen);
         mon.position.set(p.x, 1.35, p.z); mon.rotation.y = ry;
         add(mon);
-        const glow = new THREE.PointLight(0x55ff77, 0.6, 6, 2);
-        const gp = F.point(-gapA * 0.3 + (gapA > 0 ? -2.5 : 2.5), -hd + t + 2.0);
-        glow.position.set(gp.x, 1.4, gp.z); W.root.add(glow);
-        W.flickers.push({ light: glow, base: 0.6, mode: 'screen', t: 0, on: true });
         W.evidence.push({ id: 'cctv', name: 'CCTV still of the creature', pos: new THREE.Vector3(p.x, 1.35, p.z), maxDist: 7, found: false });
       }
       if (evidenceKind === 'warning') {

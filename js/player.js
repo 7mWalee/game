@@ -24,7 +24,7 @@
     this.enabled = false;
 
     // flashlight
-    this.flash = new THREE.SpotLight(0xfff1d6, 0, 42, 0.48, 0.45, 1.4);
+    this.flash = new THREE.SpotLight(0xfff1d6, 0, 48, 0.5, 0.45, 1.3);
     this.flash.position.set(0.28, -0.22, 0);
     this.flashTarget = new THREE.Object3D();
     this.flashTarget.position.set(0.1, -0.1, -10);
@@ -208,12 +208,12 @@
 
     // ---------- battery ----------
     if (this.flashOn) {
-      this.battery = Math.max(0, this.battery - dt * 100 / 260);
+      this.battery = Math.max(0, this.battery - dt * 100 / 360);
       if (this.battery <= 0) { this.flashOn = false; LO.audio.click(false); this.hint && this.hint('The flashlight died. Look for batteries — they glow yellow.'); }
     }
     let flick = 0;
     if (this.flashOn && this.battery < 15 && Math.random() < 0.08) flick = 1;
-    this.flash.intensity = this.flashOn ? (flick ? 0.3 : 1) * (LO.settings.lighting === 'simple' ? 2.2 : 5.5) * Math.min(1, 0.4 + this.battery / 40) : 0;
+    this.flash.intensity = this.flashOn ? (flick ? 0.3 : 1) * (LO.settings.lighting === 'simple' ? 3 : 8) * Math.min(1, 0.4 + this.battery / 40) : 0;
     LO.audio.setFlashlightBuzz(this.flashOn, this.battery < 15 ? 1 : 0);
 
     // ---------- noise ----------
