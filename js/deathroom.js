@@ -15,7 +15,7 @@
       'Attracted to loud sounds',
       'Stay absolutely silent when it spots you',
     ] },
-    tenant: { name: 'THE TENANT', label: 'THE TENANT', tips: [
+    tenant: { name: 'THE TENANT', label: 'PHENOMENON-225', tips: [
       'Appears as 2 glowing eyes',
       'Lurks in hiding spots',
       'Gets enraged if you hide too long',
@@ -27,13 +27,13 @@
       'Gives visual indicators before attacking',
       "Don't go completely silent for too long",
     ] },
-    moth: { name: 'THE MOTHS', label: 'THE MOTHS', tips: [
+    moth: { name: 'THE MOTHS', label: 'PHENOMENON-250', tips: [
       'Pale faceless figures with ragged wings',
       'Stand still in dark corners, only seen in flashlight',
       'Shriek if your light rests on them too long',
       'Keep your beam moving, never stare',
     ] },
-    exposure: { name: 'THE EXPOSURE', label: 'THE EXPOSURE', tips: [
+    exposure: { name: 'THE EXPOSURE', label: 'PHENOMENON-237', tips: [
       'A blurred figure only seen through a lens',
       "Lurks inside your camera's viewfinder",
       'Creeps closer the longer your camera is up',
@@ -322,7 +322,10 @@
     // name plate
     let g = this.labelCanvas.getContext('2d');
     g.fillStyle = '#e8e6de'; g.fillRect(0, 0, 512, 96);
-    g.fillStyle = '#111'; g.font = 'bold 54px Arial'; g.textAlign = 'center'; g.fillText(E.label, 256, 68);
+    g.fillStyle = '#111'; g.textAlign = 'center';
+    let fs = 54; g.font = `bold ${fs}px Arial`;
+    while (g.measureText(E.label).width > 470 && fs > 20) { fs -= 2; g.font = `bold ${fs}px Arial`; }
+    g.fillText(E.label, 256, 48 + fs * 0.36);
     this.labelTex.needsUpdate = true;
     // sketch page (inside the cover)
     g = this.sketchCanvas.getContext('2d');
