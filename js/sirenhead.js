@@ -176,7 +176,7 @@
   //  AI update. `player` exposes: pos, noiseRadius, hidden, alive
   // ------------------------------------------------------------
   SirenHead.prototype.update = function (dt, player, time) {
-    if (this.scripted) { this.animate(dt); return; }
+    if (this.scripted || !player) { this.animate(dt); return; }
     this.stateTime += dt;
     const W = this.world;
     const dx = player.pos.x - this.pos.x, dz = player.pos.z - this.pos.z;
