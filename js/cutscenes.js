@@ -59,23 +59,34 @@
       return lerp(-144, carStop.z, k);
     }
     const look = new V3();
-    const tl = new Timeline(38, [
+    // the shots were designed on a 38s clock; stretched to 58s to fit the recorded narration
+    const KNOTS = [[0, 0], [9, 7], [19, 15], [27, 21], [37, 29], [58, 38]];
+    function warp(T) {
+      for (let i = 1; i < KNOTS.length; i++) {
+        const [a0, b0] = KNOTS[i - 1], [a1, b1] = KNOTS[i];
+        if (T <= a1) return b0 + (T - a0) / (a1 - a0) * (b1 - b0);
+      }
+      return 38;
+    }
+    const tl = new Timeline(58, [
       { at: 0.3, fn: () => { A.playMusic('tension', 3); ui.fadeIn(2.5); } },
       { at: 1.5, fn: () => ui.caption('HOLLOW CREEK', 'October 24 · 2:47 AM') },
       { at: 2.5, fn: () => A.say('player', 'Three weeks ago, Hollow Creek had two thousand people living in it. Now it has none.') },
-      { at: 6.5, fn: () => ui.caption('') },
-      { at: 8.5, fn: () => A.say('player', 'The news called it a gas leak. Everybody just packed up and left in the middle of the night.') },
-      { at: 15.5, fn: () => A.say('player', 'But I heard the emergency calls. Those weren\'t gas leaks. Those were sirens.') },
-      { at: 18, fn: () => A.siren(siren.voice, 'call', 0.7) },
-      { at: 22.5, fn: () => A.say('player', '...Wait. What is that?') },
-      { at: 25.5, fn: () => { lights.forEach(l => l.intensity = 0); A.staticBurst(null, 0.6, 0.3); } },
-      { at: 25.8, fn: () => { lights.forEach(l => l.intensity = 6); } },
-      { at: 26.0, fn: () => { lights.forEach(l => l.intensity = 0); } },
-      { at: 26.6, fn: () => { lights.forEach(l => l.intensity = 6); siren.pos.set(W.STREETS[4], 0, W.STREETS[4]); siren.glowOverride = 0; } },
-      { at: 27.5, fn: () => A.say('player', 'Gone. Okay. Okay. It\'s just the dark.') },
-      { at: 30, fn: () => A.say('player', 'I need photos. Real proof that thing did this. Get enough, and the police will have to send in everything they\'ve got.') },
-      { at: 35.5, fn: () => { A.say('player', 'Stay quiet. Whatever happens... stay quiet.'); ui.fadeOut(2); } },
-    ], (t, dt) => {
+      { at: 7.5, fn: () => ui.caption('') },
+      { at: 13.0, fn: () => A.say('player', 'The news called it a gas leak. Everybody just packed up and left in the middle of the night.') },
+      { at: 21.3, fn: () => A.say('player', 'But I heard the emergency calls. Those weren\'t gas leaks. Those were sirens.') },
+      { at: 23.5, fn: () => A.siren(siren.voice, 'call', 0.7) },
+      { at: 29.2, fn: () => A.say('player', '...Wait. What is that?') },
+      { at: 32.4, fn: () => { lights.forEach(l => l.intensity = 0); A.staticBurst(null, 0.6, 0.3); } },
+      { at: 32.75, fn: () => { lights.forEach(l => l.intensity = 6); } },
+      { at: 33.0, fn: () => { lights.forEach(l => l.intensity = 0); } },
+      { at: 33.75, fn: () => { lights.forEach(l => l.intensity = 6); siren.pos.set(W.STREETS[4], 0, W.STREETS[4]); siren.glowOverride = 0; } },
+      { at: 34.4, fn: () => A.say('player', 'Gone. Okay. Okay. It\'s just the dark.') },
+      { at: 39.0, fn: () => A.say('player', 'I need photos. Real proof that thing did this. Get enough, and the police will have to send in everything they\'ve got.') },
+      { at: 50.6, fn: () => A.say('player', 'Stay quiet. Whatever happens... stay quiet.') },
+      { at: 55.6, fn: () => ui.fadeOut(2) },
+    ], (T, dt) => {
+      const t = warp(T);
       const z = carZ(t);
       car.position.set(carStop.x, 0, z);
       if (engine) engine.set(t < 29 ? 0.35 : Math.max(0, 0.35 - (t - 29) * 0.15), t < 21 ? 1 : Math.max(0.2, 1 - (t - 21) / 8));
@@ -254,7 +265,7 @@
     ctx.cleanup.push(() => { sirens.forEach(s => s.stop()); sirens = []; if (heliSnd) heliSnd.stop(); heliSnd = null; });
 
     const look = new V3();
-    const tl = new Timeline(40, [
+    const tl = new Timeline(43, [
       { at: 0.1, fn: () => { ui.fadeIn(2.5); ui.caption('6:02 AM', 'Thirty minutes after the photos were sent'); A.playMusic('chase', 2); } },
       { at: 0.5, fn: () => { sirens.push(A.policeSirens({ x: 0, y: 1, z: -200 })); sirens[0].set(0.6); heliSnd = A.helicopter({ x: 0, y: 60, z: -300 }); heliSnd.set(0.5); } },
       { at: 1.5, fn: () => A.say('radio', 'All units, proceed to Main and Fourth. Heavy equipment is cleared to engage.') },
@@ -272,7 +283,7 @@
       { at: 27, fn: () => { A.playMusic('ending', 3); ui.caption('SUSPECT IN CUSTODY', 'Hollow Creek, 6:12 AM'); } },
       { at: 28, fn: () => A.say('radio', 'Suspect is down and restrained. Hollow Creek is secure. Good work, everyone.') },
       { at: 33, fn: () => A.say('player', 'It\'s over. Hollow Creek can finally be quiet... for the right reasons.') },
-      { at: 37.5, fn: () => ui.fadeOut(2.5) },
+      { at: 40.5, fn: () => ui.fadeOut(2.5) },
     ], (t, dt) => {
       // drive vehicles in
       vehicles.forEach(v => {

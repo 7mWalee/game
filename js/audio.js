@@ -67,7 +67,18 @@
 
   // ---------- recorded sounds: death screen music, Tenant ringing ----------
   const samples = {};
+  const voiceSamples = {};   // the player's recorded lines, keyed by subtitle text
+  function decodeB64(b64, cb) {
+    try {
+      const bin = atob(b64);
+      const buf = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      ctx.decodeAudioData(buf.buffer, cb, () => {});
+    } catch (e) { /* missing sound is not fatal */ }
+  }
   function loadSamples() {
+    const V = LO.VOICE_DATA;
+    if (V) Object.keys(V).forEach(text => decodeB64(V[text], b => { voiceSamples[text] = b; }));
     const D = LO.SOUND_DATA;
     if (!D) return;
     Object.keys(D).forEach(key => {
@@ -1067,6 +1078,18 @@
 
     if (role === 'radio') A.staticBurst(null, 0.35, 0.12);
     if (A.still) { setTimeout(finish, 50); return; } // the world is silent
+    // the player's own recorded voice, when there is a take for this line
+    const rec = role === 'player' && voiceSamples[text];
+    if (rec && S.tts && S.voice > 0 && ctx) {
+      showSub(who, text, cls, rec.duration * 1000 + 900);
+      const src = ctx.createBufferSource(); src.buffer = rec;
+      src.connect(voiceBus);
+      src.onended = () => { if (currentRec === src) currentRec = null; finish(); };
+      src.start();
+      currentRec = src;
+      setTimeout(finish, rec.duration * 1000 + 1500);  // safety net
+      return;
+    }
     const canSpeak = synth && S.tts && S.voice > 0 && (!overlay || !synth.speaking);
     showSub(who, text, cls, est + 1200);
     if (canSpeak) {
@@ -1087,8 +1110,12 @@
       setTimeout(finish, est);
     }
   }
+  let currentRec = null;
+  A.recordedLines = () => Object.keys(voiceSamples).length;
+  A.isPlayingRecording = () => !!currentRec;
   A.stopVoices = function () {
     queue.length = 0;
+    if (currentRec) { try { currentRec.stop(); } catch (e) {} currentRec = null; }
     if (synth) try { synth.cancel(); } catch (e) {}
     speaking = false;
     A.clearSubs();

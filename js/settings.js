@@ -67,7 +67,7 @@ window.LO = window.LO || {};
     { key: 'music', label: 'Music', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
     { key: 'sfx', label: 'Sound Effects', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
     { key: 'voice', label: 'Voices', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
-    { key: 'tts', label: 'Spoken Voice Lines', desc: 'Uses your browser\'s speech voices', type: 'choice', values: [false, true], labels: ['Off', 'On'] },
+    { key: 'tts', label: 'Spoken Voice Lines', desc: 'Off shows subtitles only', type: 'choice', values: [false, true], labels: ['Off', 'On'] },
     { key: 'subtitles', label: 'Subtitles', type: 'choice', values: [false, true], labels: ['Off', 'On'] },
     { section: 'CONTROLS' },
     { key: 'sensitivity', label: 'Mouse Sensitivity', type: 'range', min: 0.2, max: 3, step: 0.05, fmt: v => v.toFixed(2) + 'x' },
