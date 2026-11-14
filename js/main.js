@@ -120,6 +120,16 @@
       if (cause === 'silent') A.silentHit();
     };
     player.onDeath = cause => dieBy(cause);
+    player.onRockLand = pos => {
+      if (state !== 'play') return;
+      if (siren.hearNoise(pos, 45)) hintOnce('rockworked', 'He heard the rock. Move while he checks it out.', 5000);
+    };
+    siren.onEcho = d => {
+      if (state !== 'play' || A.still) return;
+      const r = $('echo-ring');
+      r.classList.remove('go'); void r.offsetWidth; r.classList.add('go');
+      hintOnce('echo', 'He pinged the town. He knows roughly where you are now, even if you\'re silent — keep moving.', 7000);
+    };
     player.onKicked = () => {
       A.tenantScream();
       const f = $('tenant-face');
@@ -287,6 +297,7 @@
     player.enabled = false;
     player.flashOn = false;
     A.setFlashlightBuzz(false); A.setBreathing(0); A.setHeartbeat(0); A.setTenant(0); A.setSilentOne(0);
+    A.setStillness(false); document.body.classList.remove('still');
     $('silent-one').style.opacity = 0;
     if (worldDirty || state === 'ending' || state === 'credits' || state === 'dead') buildWorld();
     setupTitleScene();
@@ -569,6 +580,7 @@
       if (state !== 'dying') return;
       state = 'dead';
       A.setSilentOne(0);
+      A.setStillness(false); document.body.classList.remove('still');
       $('silent-one').style.opacity = 0;
       ui.fadeOut(0.3);
       setTimeout(() => {
@@ -595,8 +607,10 @@
     gustT += dt;
     const gust = Math.max(0, Math.min(1, 0.45 + Math.sin(gustT * 0.31) * 0.3 + Math.sin(gustT * 0.83 + 1.7) * 0.25));
     A.setWind(0.26 * windStrength, gust, still ? 0.25 : 1.2);
+    // when the wind dies, everything else dies with it: sounds, voices, text
+    A.setStillness(still);
+    document.body.classList.toggle('still', still);
     world.updateWind(dt, windStrength * (0.6 + gust * 0.6), camera.position, gameTime);
-    if (still) hintOnce('windstop', '...the wind has stopped.', 4000);
   }
 
   // ============================================================
@@ -636,6 +650,10 @@
       $('hide-overlay').classList.toggle('restless', tf >= 0.75);
       A.setTenant(Math.max(0, (tf - 0.3) / 0.7));
     } else A.setTenant(0);
+
+    // rocks
+    const rs = $('rocks').children;
+    for (let i = 0; i < rs.length; i++) rs[i].classList.toggle('have', i < player.rocks);
 
     // health
     $('health-fill').style.width = player.health + '%';

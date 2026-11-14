@@ -8,7 +8,8 @@
   const A = {};
   LO.audio = A;
 
-  let ctx = null, master, musicBus, sfxBus, voiceBus, comp;
+  let ctx = null, master, musicBus, sfxBus, voiceBus, worldBus, comp;
+  A.still = false; // true while the wind has died: the whole world goes silent
   let noiseBuf = null, brownBuf = null;
 
   A.ready = false;
@@ -22,7 +23,8 @@
     comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 4;
     master = ctx.createGain();
     musicBus = ctx.createGain(); sfxBus = ctx.createGain(); voiceBus = ctx.createGain();
-    musicBus.connect(master); sfxBus.connect(master); voiceBus.connect(master);
+    worldBus = ctx.createGain();
+    musicBus.connect(master); sfxBus.connect(master); voiceBus.connect(master); worldBus.connect(sfxBus);
     master.connect(comp); comp.connect(ctx.destination);
     applyVolumes();
 
@@ -47,13 +49,23 @@
     if (!ctx) return;
     const t = ctx.currentTime;
     master.gain.setTargetAtTime(S.master, t, 0.05);
-    musicBus.gain.setTargetAtTime(S.music * 0.55, t, 0.05);
+    const k = A.still ? 0 : 1, tc = A.still ? 0.15 : 0.8;
+    musicBus.gain.setTargetAtTime(S.music * 0.55 * k, t, tc);
+    if (worldBus) worldBus.gain.setTargetAtTime(k, t, tc);
     sfxBus.gain.setTargetAtTime(S.sfx, t, 0.05);
-    voiceBus.gain.setTargetAtTime(S.voice, t, 0.05);
+    voiceBus.gain.setTargetAtTime(S.voice * k, t, tc);
   }
   LO.events.addEventListener('settings', applyVolumes);
 
   A.now = () => (ctx ? ctx.currentTime : 0);
+
+  // the wind has stopped: silence music, voices and every sound the world makes
+  A.setStillness = function (on) {
+    if (A.still === on) return;
+    A.still = on;
+    if (on) { A.stopVoices(); }
+    applyVolumes();
+  };
 
   // ---------- helpers ----------
   function noiseSrc(brown, loop) {
@@ -264,7 +276,7 @@
   let heartNext = 0, heartAmt = 0;
   A.setHeartbeat = function (amt) { heartAmt = amt; };
   function heartTick() {
-    if (!ctx || heartAmt < 0.05) return;
+    if (!ctx || heartAmt < 0.05 || A.still) return;
     const t = ctx.currentTime;
     if (t < heartNext) return;
     const bpm = 60 + heartAmt * 90;
@@ -301,6 +313,38 @@
     wind.g.gain.setTargetAtTime(vol * (0.6 + gust * 0.8), t, tc || 1.0);
     wind.wg.gain.setTargetAtTime(vol * gust * gust * 0.5, t, tc || 1.0);
     wind.wf.frequency.setTargetAtTime(700 + gust * 700, t, 0.6);
+  };
+
+  // ---------- echolocation ping (Siren Head) ----------
+  A.echoPing = function (voice) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const dest = voice ? voice.out : worldBus;
+    [0, 0.45, 0.9].forEach((dt, i) => {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(2600 - i * 300, t + dt);
+      o.frequency.exponentialRampToValueAtTime(420, t + dt + 0.35);
+      const g = ctx.createGain(); env(g, t + dt, 0.005, 0.5, 0.4, 0.0001);
+      o.connect(g); g.connect(dest); o.start(t + dt); o.stop(t + dt + 0.5);
+    });
+    // a long reverberant tail that seems to wash over you
+    const n = noiseSrc(false, false);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1300; f.Q.value = 12;
+    const g2 = ctx.createGain(); env(g2, t + 1.2, 0.3, 0.25, 2.2, 0.0001);
+    n.connect(f); f.connect(g2); g2.connect(worldBus); n.start(t + 1.2); n.stop(t + 4);
+  };
+
+  // thrown rock hitting the ground
+  A.rockClack = function (pos) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const p = panner(pos, 6, 1); p.connect(sfxBus);
+    [0, 0.12, 0.2].forEach((dt, i) => {
+      const n = noiseSrc(false, false);
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800 - i * 300; f.Q.value = 4;
+      const g = ctx.createGain(); env(g, t + dt, 0.001, 0.9 / (i + 1), 0.08, 0.0001);
+      n.connect(f); f.connect(g); g.connect(p); n.start(t + dt); n.stop(t + dt + 0.12);
+    });
   };
 
   // ---------- THE TENANT (hiding spot lurker) ----------
@@ -402,7 +446,7 @@
     if (!ctx) return null;
     const p = panner({ x: 0, y: 14, z: 0 }, 14, 0.9);
     const out = ctx.createGain(); out.gain.value = 1;
-    out.connect(p); p.connect(sfxBus);
+    out.connect(p); p.connect(worldBus);
     return { panner: p, out };
   };
 
@@ -498,7 +542,7 @@
     if (!ctx) return;
     const t = ctx.currentTime;
     const p = panner(pos, 20, 0.7);
-    p.connect(sfxBus);
+    p.connect(worldBus);
     const o = ctx.createOscillator(); o.type = 'sine';
     o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(24, t + 0.6);
     const g = ctx.createGain(); env(g, t, 0.005, 1.2 * (vol || 1), 0.7, 0.0001);
@@ -893,6 +937,7 @@
     if (!overlay) speaking = true;
 
     if (role === 'radio') A.staticBurst(null, 0.35, 0.12);
+    if (A.still) { setTimeout(finish, 50); return; } // the world is silent
     const canSpeak = synth && S.tts && S.voice > 0 && (!overlay || !synth.speaking);
     showSub(who, text, cls, est + 1200);
     if (canSpeak) {

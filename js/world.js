@@ -751,6 +751,20 @@
     }
     // outdoor batteries
     [[-58, -20], [47, 58], [-20, 47], [56, -80], [-102, 70], [80, 100], [4, -40]].forEach(([x, z]) => battery(x, 0.4, z));
+    // throwable rocks lying around (sparse — you only find one occasionally)
+    {
+      const rg = new THREE.DodecahedronGeometry(0.14);
+      const rm = mat({ color: 0x77736c });
+      for (let i = 0; i < 16; i++) {
+        const s = pick(STREETS), a = R(-HALF + 10, HALF - 10), off = R(-4.5, 4.5);
+        const v = rand() < 0.5;
+        const m = new THREE.Mesh(rg, rm);
+        m.position.set(v ? s + off : a, 0.12, v ? a : s + off);
+        m.rotation.set(R(0, 3), R(0, 3), 0);
+        W.root.add(m);
+        W.pickups.push({ type: 'rock', mesh: m, pos: m.position, baseY: 0.12, taken: false, still: true });
+      }
+    }
     // debris
     for (let i = 0; i < 40; i++) {
       const s = pick(STREETS), a = R(-HALF + 8, HALF - 8);
@@ -940,7 +954,7 @@
         }
       });
       W.pickups.forEach(p => {
-        if (p.taken) return;
+        if (p.taken || p.type === 'rock') return;
         p.mesh.position.y = p.baseY + Math.sin(time * 2 + p.pos.x) * 0.06;
         p.mesh.rotation.y += dt;
       });

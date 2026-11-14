@@ -404,3 +404,24 @@ body.touch #t-hint { grid-column: span 2; }
 #silent-one.attack .so-text { color: #ff4040; font-family: var(--font-title); font-size: 26px; animation: blink 0.5s infinite; }
 #silent-one.attack .so-dark { background: radial-gradient(ellipse at center, rgba(40,0,0,0.2) 20%, rgba(0,0,0,0.95) 90%); }
 @keyframes soAttack { 0% { transform: translateX(50%) scale(1); } 50% { transform: translateX(calc(50% + 6px)) scale(1.03); opacity: 0.6; } 100% { transform: translateX(50%) scale(1); } }
+
+/* ---------- rocks ---------- */
+#rocks { display: flex; gap: 6px; }
+#rocks span { width: 12px; height: 10px; border-radius: 40% 55% 45% 50%; border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.4); }
+#rocks span.have { background: #9a948a; border-color: #cfc8bc; }
+body.touch #t-throw { grid-column: span 1; }
+
+/* ---------- echolocation ping ---------- */
+#echo-ring { position: fixed; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; border: 3px solid rgba(160,220,255,0.0); pointer-events: none; z-index: 8; }
+#echo-ring.go { animation: echo 2.4s ease-out; }
+@keyframes echo {
+  0% { transform: scale(0.5); border-color: rgba(160,220,255,0.8); }
+  100% { transform: scale(60); border-color: rgba(160,220,255,0); border-width: 1px; }
+}
+
+/* ---------- the world goes still (wind stopped): all text disappears ---------- */
+body.still #subtitles, body.still #hint, body.still #prompt, body.still #status-box,
+body.still #objective, body.still #hint-btn, body.still #hint-arrow, body.still #photo-pop,
+body.still #bars label, body.still #health-num, body.still .hide-text {
+  opacity: 0 !important; transition: opacity 0.4s;
+}

@@ -13,6 +13,8 @@
   };
   const TENANT_LIMIT = 14;
   const TENANT_DAMAGE = 30;
+  const MAX_ROCKS = 3;
+  LO.MAX_ROCKS = MAX_ROCKS;
   // THE SILENT ONE (Phenomenon-249): drawn to complete silence
   const SILENT_WARN = 20, SILENT_ATTACK = 30, SILENT_DAMAGE = 5, SILENT_TICK = 1.0;
   LO.SILENT = { WARN: SILENT_WARN, ATTACK: SILENT_ATTACK };   // seconds you can hide before the Tenant loses patience
@@ -68,6 +70,9 @@
     this.cameraUp = false;
     this.hidden = null;
     this.hideTime = 0;
+    this.rocks = 0;
+    (this.projectiles || []).forEach(r => r.mesh.parent && r.mesh.parent.remove(r.mesh));
+    this.projectiles = [];
     this.health = 100;          // never regenerates
     this.silentTime = 0;
     this.silentTick = 0;
@@ -94,6 +99,7 @@
       if (e.code === 'KeyF') self.toggleFlash();
       if (e.code === 'KeyE') self.interact();
       if (e.code === 'KeyQ') self.cameraUp = !self.cameraUp;
+      if (e.code === 'KeyG') self.throwRock();
       if (e.code === 'Space' || e.code === 'Tab') e.preventDefault();
     });
     window.addEventListener('keyup', e => { self.keys[e.code] = false; });
@@ -233,11 +239,12 @@
     LO.audio.setFlashlightBuzz(this.flashOn, this.battery < 15 ? 1 : 0);
 
     // ---------- noise ----------
+    // every source STACKS: walking with the light on is louder than either alone
     let n = 0;
-    if (this.flashOn) n = Math.max(n, NOISE.flashlight);
-    if (this.moving && !this.hidden) n = Math.max(n, this.sprinting ? NOISE.sprint : this.crouch > 0.5 ? NOISE.crouch : NOISE.walk);
-    if (this.panting > 0.05 && !(this.crouch > 0.5 && !this.moving) && !this.hidden) n = Math.max(n, NOISE.panting);
-    n = Math.max(n, this.spike);
+    if (this.flashOn) n += NOISE.flashlight;
+    if (this.moving && !this.hidden) n += this.sprinting ? NOISE.sprint : this.crouch > 0.5 ? NOISE.crouch : NOISE.walk;
+    if (this.panting > 0.05 && !(this.crouch > 0.5 && !this.moving) && !this.hidden) n += NOISE.panting;
+    n += this.spike;
     if (indoor) n *= 0.6;
     if (this.hidden) n = this.spike > 0 ? this.spike * 0.5 : 0;
     this.noiseRadius = n;
@@ -261,12 +268,23 @@
     W.pickups.forEach(p => {
       if (p.taken) return;
       if (Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z) < 1.4) {
+        if (p.type === 'rock') {
+          if (this.rocks >= MAX_ROCKS || this.hidden) return;
+          p.taken = true; p.mesh.visible = false;
+          this.rocks++;
+          LO.audio.click(false);
+          this.hint && this.hint(`Rock picked up (${this.rocks}/${MAX_ROCKS}). ${LO.isTouch ? 'Tap THROW' : 'Press G'} to throw it and distract him.`);
+          return;
+        }
         p.taken = true; p.mesh.visible = false;
         this.battery = Math.min(100, this.battery + 45);
         LO.audio.pickup();
         this.hint && this.hint('Battery found (+45%)');
       }
     });
+
+    // ---------- thrown rocks ----------
+    this.updateRocks(dt);
 
     // ---------- interaction prompt ----------
     this.prompt = '';
@@ -342,6 +360,47 @@
     this.hideTime = TENANT_LIMIT * 0.6;              // still restless if you dive straight back in
     this.onKicked && this.onKicked();
     this.damage(TENANT_DAMAGE, 'tenant');
+  };
+
+  // ------------------------------------------------------------
+  //  ROCKS — throw one to make a loud noise somewhere else
+  // ------------------------------------------------------------
+  const rockGeo = new THREE.DodecahedronGeometry(0.14);
+  const rockMat = new THREE.MeshLambertMaterial({ color: 0x77736c });
+  Player.prototype.throwRock = function () {
+    if (!this.enabled || this.hidden) return;
+    if (this.rocks <= 0) { this.hint && this.hint('No rocks. Look for them on the ground.'); return; }
+    this.rocks--;
+    const dir = new V3();
+    this.camera.getWorldDirection(dir);
+    const mesh = new THREE.Mesh(rockGeo, rockMat);
+    mesh.position.copy(this.camera.position).addScaledVector(dir, 0.6);
+    this.scene.add(mesh);
+    const vel = dir.multiplyScalar(17); vel.y += 4.5;
+    this.projectiles.push({ mesh, vel, spin: new V3(Math.random() * 9, Math.random() * 9, 0) });
+    this.spike = Math.max(this.spike, 3);   // the throw itself is quiet
+    LO.audio.jumpGrunt();
+  };
+  Player.prototype.updateRocks = function (dt) {
+    const W = this.world;
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const r = this.projectiles[i], p = r.mesh.position;
+      r.vel.y -= 13 * dt;
+      const nx = p.x + r.vel.x * dt, nz = p.z + r.vel.z * dt;
+      // hit a wall: drop straight down
+      const hit = W.colliders.some(c => p.y < c.maxY && nx > c.minX && nx < c.maxX && nz > c.minZ && nz < c.maxZ);
+      if (hit) { r.vel.x *= -0.15; r.vel.z *= -0.15; } else { p.x = nx; p.z = nz; }
+      p.y += r.vel.y * dt;
+      r.mesh.rotation.x += r.spin.x * dt; r.mesh.rotation.y += r.spin.y * dt;
+      if (p.y <= 0.12) {
+        p.y = 0.12;
+        this.projectiles.splice(i, 1);
+        LO.audio.rockClack(p);
+        this.onRockLand && this.onRockLand(p.clone());
+        // the rock stays where it lands and can be picked up again
+        W.pickups.push({ type: 'rock', mesh: r.mesh, pos: r.mesh.position, baseY: 0.12, taken: false });
+      }
+    }
   };
 
   Player.prototype.damage = function (amount, cause) {

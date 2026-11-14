@@ -39,6 +39,8 @@
     this.glow = 0;
     this.creakTimer = 4;
     this.hunting = false;
+    this.echoTimer = 50 + Math.random() * 15;
+    this.echoCount = 0;
     this.voice = LO.audio.createMonsterVoice();
     this.spawnFar();
   }
@@ -178,6 +180,7 @@
   SirenHead.prototype.update = function (dt, player, time) {
     if (this.scripted || !player) { this.animate(dt); return; }
     this.stateTime += dt;
+    this.lastTime = time;
     const W = this.world;
     const dx = player.pos.x - this.pos.x, dz = player.pos.z - this.pos.z;
     const dist = Math.sqrt(dx * dx + dz * dz);
@@ -211,6 +214,24 @@
     const sinceHeard = time - this.lastHeardTime;
     this.stalkTimer = (this.stalkTimer || 0) + dt;
 
+    // ---------- ECHOLOCATION ----------
+    // roughly once a minute he pings the town. It finds you even if you are
+    // silent or hidden, and every ping narrows down where you are.
+    this.echoTimer -= dt;
+    if (this.echoTimer <= 0 && this.state !== 'hunt') {
+      this.echoTimer = 52 + Math.random() * 16;
+      this.echoCount++;
+      LO.audio.echoPing(this.voice);
+      const err = Math.max(6, Math.min(45, dist * 0.45) * Math.pow(0.8, this.echoCount - 1));
+      const a = Math.random() * Math.PI * 2, r = Math.random() * err;
+      this.lastHeard.set(player.pos.x + Math.cos(a) * r, 0, player.pos.z + Math.sin(a) * r);
+      this.lastHeardTime = time;
+      this.echoApproach = true;
+      this.setState('investigate');
+      this.onEcho && this.onEcho(dist);
+    }
+    if (heard) this.echoApproach = false;
+
     // ---------- STATE MACHINE ----------
     switch (this.state) {
       case 'wander':
@@ -238,7 +259,8 @@
         }
         break;
       case 'investigate':
-        this.speed = 5.0;
+        // an echo only gives him a rough idea: he creeps closer slowly
+        this.speed = this.echoApproach ? 2.6 : 5.0;
         if (this.anger >= 100) { this.startHunt(dist); break; }
         this.goTo(this.lastHeard, dt);
         if (this.reached && sinceHeard > 2.5) this.setState('search');
@@ -297,6 +319,23 @@
     // ---------- MOVEMENT ----------
     if (this.state === 'wander') this.followPath(dt);
     this.animate(dt);
+  };
+
+  // a noise that is not the player (a thrown rock) — he goes to check it out
+  SirenHead.prototype.hearNoise = function (pos, radius) {
+    if (this.scripted) return false;
+    const d = Math.hypot(pos.x - this.pos.x, pos.z - this.pos.z);
+    if (d > radius * 1.3) return false;
+    this.lastHeard.set(pos.x, 0, pos.z);
+    this.lastHeardTime = this.lastTime || 0;
+    this.echoApproach = false;
+    this.path = [];
+    if (this.state === 'hunt') return true;           // keeps hunting — but toward the rock
+    this.anger = Math.min(90, this.anger + 15);
+    this.setState('investigate');
+    if (Math.random() < 0.6) this.say('heard', d);
+    LO.audio.siren(this.voice, 'short', 0.8);
+    return true;
   };
 
   SirenHead.prototype.startHunt = function (dist) {

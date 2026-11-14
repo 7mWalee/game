@@ -6,7 +6,7 @@
 <title>The Loud One</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Special+Elite&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=8">
+<link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
 
@@ -41,7 +41,7 @@
       <button data-action="howto">HOW TO PLAY</button>
     </nav>
   </div>
-  <div class="title-footer">v1.7 &nbsp;·&nbsp; stay quiet</div>
+  <div class="title-footer">v1.8 &nbsp;·&nbsp; stay quiet</div>
 </div>
 
 <!-- Graphics options -->
@@ -85,6 +85,8 @@
       <tr><td>E</td><td>Hide / interact / pick up</td></tr>
       <tr><td colspan="2" style="color:#d6cfc0">You have <b>100 HP</b> and it never comes back. Don't stay <b>completely silent for too long</b> either — after 20 seconds <b>the Silent One</b> starts to come for you, and at 30 seconds it attacks (5 HP per second) until you make a sound.</td></tr>
       <tr><td colspan="2" style="color:#d6cfc0">Don't hide too long — <b>the Tenant</b> lives in the hiding spots and will throw you out (loudly), taking <b>30 HP</b>.</td></tr>
+      <tr><td>G</td><td>Throw a rock (distracts him — it lands loudly)</td></tr>
+      <tr><td colspan="2" style="color:#d6cfc0">About once a minute he sends out an <b>echolocation ping</b> that finds you even when you're silent, and he creeps closer. When the <b>wind stops</b>, the whole world goes quiet: that's the Silent One coming.</td></tr>
       <tr><td>H</td><td>Hint (unlocks after 3 minutes without finding evidence)</td></tr>
       <tr><td>Esc</td><td>Pause</td></tr>
     </table>
@@ -137,6 +139,10 @@
       <div class="bar stamina"><div id="stamina-fill"></div></div>
     </div>
     <div class="bar-row">
+      <label>ROCKS</label>
+      <div id="rocks"><span></span><span></span><span></span></div>
+    </div>
+    <div class="bar-row">
       <label>BATTERY</label>
       <div class="bar battery"><div id="battery-fill"></div></div>
     </div>
@@ -157,6 +163,7 @@
       <button class="t-btn" data-t="crouch" id="t-crouch">CROUCH</button>
       <button class="t-btn" data-t="jump">JUMP</button>
       <button class="t-btn" data-t="sprint" id="t-sprint">SPRINT</button>
+      <button class="t-btn" data-t="throw" id="t-throw">THROW</button>
       <button class="t-btn" data-t="hint" id="t-hint">HINT</button>
     </div>
   </div>
@@ -172,6 +179,7 @@
   <div class="vf-film" id="vf-film">FILM ∞</div>
 </div>
 <div id="flash"></div>
+<div id="echo-ring"></div>
 <!-- The Silent One (Phenomenon-249) -->
 <div id="silent-one">
   <div class="so-dark"></div>
@@ -255,14 +263,14 @@
 <div id="fps"></div>
 
 <script src="js/lib/three.min.js"></script>
-<script src="js/settings.js?v=8"></script>
-<script src="js/audio.js?v=8"></script>
-<script src="js/textures.js?v=8"></script>
-<script src="js/world.js?v=8"></script>
-<script src="js/sirenhead.js?v=8"></script>
-<script src="js/player.js?v=8"></script>
-<script src="js/cutscenes.js?v=8"></script>
-<script src="js/main.js?v=8"></script>
-<script src="js/touch.js?v=8"></script>
+<script src="js/settings.js?v=9"></script>
+<script src="js/audio.js?v=9"></script>
+<script src="js/textures.js?v=9"></script>
+<script src="js/world.js?v=9"></script>
+<script src="js/sirenhead.js?v=9"></script>
+<script src="js/player.js?v=9"></script>
+<script src="js/cutscenes.js?v=9"></script>
+<script src="js/main.js?v=9"></script>
+<script src="js/touch.js?v=9"></script>
 </body>
 </html>

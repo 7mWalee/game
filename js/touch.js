@@ -88,6 +88,7 @@
         case 'shutter': if (p.cameraUp) p.takePhoto(); break;
         case 'use': p.interact(); break;
         case 'hint': LO.useHint && LO.useHint(); break;
+        case 'throw': p.throwRock(); break;
       }
     }, { passive: false });
     b.addEventListener('touchend', e => {
