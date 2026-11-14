@@ -16,9 +16,9 @@
       'Stay absolutely silent when it spots you',
     ] },
     tenant: { name: 'THE TENANT', label: 'PHENOMENON-225', tips: [
-      'Appears as a single red eye',
+      'Appears as 2 glowing eyes',
       'Lurks in hiding spots',
-      'Creeps closer the longer you hide',
+      'Gets enraged if you hide too long',
       "Don't overstay your welcome",
     ] },
     silent: { name: 'THE SILENT ONE', label: 'PHENOMENON-249', tips: [
@@ -90,10 +90,10 @@
       pencil(g, [[w * 0.3, h * 0.12], [w * 0.7, h * 0.12], [w * 0.7, h * 0.92], [w * 0.3, h * 0.92]], 3, 3, true);
       for (let i = 0; i < 9; i++) pencil(g, [[w * 0.36, h * (0.2 + i * 0.07)], [w * 0.64, h * (0.2 + i * 0.07)]], 1, 2);
       hatch(g, w * 0.32, h * 0.14, w * 0.68, h * 0.9, 120, 0.9);
-      g.save(); g.fillStyle = '#f4f0e0'; g.beginPath(); g.ellipse(w * 0.5, h * 0.42, 46, 20, 0, 0, 7); g.fill();
-      g.fillStyle = '#a31515'; g.beginPath(); g.ellipse(w * 0.5, h * 0.42, 22, 18, 0, 0, 7); g.fill();
-      g.fillStyle = '#111'; g.beginPath(); g.ellipse(w * 0.5, h * 0.42, 5, 15, 0, 0, 7); g.fill(); g.restore();
-      ellipse(g, w * 0.5, h * 0.42, 47, 21, 3);
+      g.save(); g.fillStyle = '#f4f0e0';
+      [[0.43, 0.42], [0.57, 0.42]].forEach(([x, y]) => { g.beginPath(); g.ellipse(w * x, h * y, 16, 8, 0, 0, 7); g.fill(); });
+      g.restore();
+      ellipse(g, w * 0.43, h * 0.42, 17, 9, 3); ellipse(g, w * 0.57, h * 0.42, 17, 9, 3);
     },
     silent(g, w, h) {
       const cx = w / 2;
@@ -171,10 +171,10 @@
       g.fillStyle = '#2a2d30'; g.fillRect(W * 0.36, H * 0.12, W * 0.28, H * 0.6);
       g.fillStyle = '#111'; for (let i = 0; i < 7; i++) g.fillRect(W * 0.39, H * (0.2 + i * 0.06), W * 0.22, 4);
       const k = Math.min(1, T / 4.5);
-      g.save(); g.translate(W * 0.5, H * 0.38); g.scale(0.4 + k * 1.1, 0.4 + k * 1.1);
-      g.globalAlpha = 0.3 + k * 0.7;
-      g.fillStyle = '#c21b12'; g.beginPath(); g.ellipse(0, 0, 18, 8, 0, 0, 7); g.fill();
-      g.fillStyle = '#000'; g.beginPath(); g.ellipse(0, 0, 2.5, 7, 0, 0, 7); g.fill();
+      // two eyes, growing as they come closer
+      g.save(); g.translate(W * 0.5, H * 0.36); g.scale(0.5 + k * 1.3, 0.5 + k * 1.3);
+      g.fillStyle = `rgba(240,235,210,${0.3 + k * 0.7})`;
+      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(d * 11, 0, 7, 3.2, 0, 0, 7); g.fill(); });
       g.restore();
       if (T > 3.6) fig(g, W * 0.72 + (T - 3.6) * 25, H * 0.74, 1);
       caption(g, W, H, T > 3.6 ? 'GET OUT BEFORE IT REACHES YOU' : 'IT IS ALREADY IN THERE');

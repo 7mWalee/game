@@ -6,7 +6,7 @@
 <title>The Loud One</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@500;700&family=Special+Elite&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=26">
+<link rel="stylesheet" href="css/style.css?v=28">
 </head>
 <body>
 
@@ -94,7 +94,7 @@
       <li>Death screen music, synced to the TV switching on; when it ends you're sent back to the title</li>
       <li>Ear ringing after the Tenant throws you out</li>
       <li>Moths now deal 20 damage; the Exposure deals 25 when photographed and 40 when it reaches you</li>
-      <li>The Tenant reworked: a red eye creeps closer the longer you hide, until it reaches you</li>
+      <li>The Tenant reworked: its two glowing eyes creep closer the longer you hide, until they reach you (the timer bar is gone)</li>
       <li>The player's lines are now a real recorded voice</li>
       <li>New death sequence: red flood with the creature burned in, static, then the screen switches off like an old TV</li>
       <li>New recorded death sound and TV switch-off</li>
@@ -252,15 +252,7 @@
 <div id="hide-overlay" class="screen">
   <div class="slats"></div>
   <div id="tenant-red"></div>
-  <div id="tenant-eye">
-    <svg viewBox="0 0 200 100" aria-hidden="true">
-      <defs><radialGradient id="iris" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ff3b2f"/><stop offset="0.7" stop-color="#b10d0d"/><stop offset="1" stop-color="#4a0000"/></radialGradient></defs>
-      <path d="M4 50 Q100 -18 196 50 Q100 118 4 50Z" fill="#1a0505"/>
-      <path d="M14 50 Q100 -6 186 50 Q100 106 14 50Z" fill="url(#iris)"/>
-      <ellipse cx="100" cy="50" rx="10" ry="30" fill="#050000"/>
-      <ellipse cx="88" cy="38" rx="7" ry="4" fill="rgba(255,220,210,0.55)"/>
-    </svg>
-  </div>
+  <div id="tenant-eyes"><span></span><span></span></div>
   <div class="hide-text" id="hide-text">HIDING — press E to leave</div>
 </div>
 
@@ -309,19 +301,19 @@
 <div id="fps"></div>
 
 <script src="js/lib/three.min.js"></script>
-<script src="js/settings.js?v=26"></script>
+<script src="js/settings.js?v=27"></script>
 <script src="audio/sounds.js?v=25"></script>
 <script src="audio/voice.js?v=16"></script>
-<script src="js/audio.js?v=26"></script>
-<script src="js/textures.js?v=26"></script>
-<script src="js/world.js?v=26"></script>
-<script src="js/sirenhead.js?v=26"></script>
-<script src="js/player.js?v=26"></script>
-<script src="js/moths.js?v=26"></script>
-<script src="js/deathroom.js?v=26"></script>
-<script src="js/cutscenes.js?v=26"></script>
-<script src="js/tvfx.js?v=26"></script>
-<script src="js/main.js?v=26"></script>
-<script src="js/touch.js?v=26"></script>
+<script src="js/audio.js?v=27"></script>
+<script src="js/textures.js?v=27"></script>
+<script src="js/world.js?v=27"></script>
+<script src="js/sirenhead.js?v=27"></script>
+<script src="js/player.js?v=27"></script>
+<script src="js/moths.js?v=27"></script>
+<script src="js/deathroom.js?v=27"></script>
+<script src="js/cutscenes.js?v=27"></script>
+<script src="js/tvfx.js?v=27"></script>
+<script src="js/main.js?v=27"></script>
+<script src="js/touch.js?v=27"></script>
 </body>
 </html>

@@ -457,10 +457,11 @@ body.still #bars label, body.still #health-num, body.still .hide-text {
 #tvfx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 42; pointer-events: none; }
 
 /* the Tenant (v2.1 rework): one red eye coming closer */
-#tenant-eyes, #tenant-bar { display: none; }
 #tenant-red { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, rgba(120,0,0,0.15) 15%, rgba(140,0,0,0.85) 75%, rgba(60,0,0,0.95) 100%); }
-#tenant-eye { position: absolute; top: 46%; left: 50%; transform: translate(-50%, -50%) scale(0.2); opacity: 0; filter: drop-shadow(0 0 18px rgba(255,30,10,0.7)); }
-#tenant-eye svg { width: min(22vw, 220px); height: auto; display: block; animation: tenantEye 3.2s infinite; }
-@keyframes tenantEye { 0%, 90%, 100% { transform: scaleY(1); } 93% { transform: scaleY(0.08); } }
 #hide-overlay .hide-text { z-index: 2; }
-#hide-overlay.restless #tenant-eye svg { animation: tenantEye 3.2s infinite, shakeSlats 0.12s infinite; }
+
+/* the Tenant: two glowing eyes that grow as they come closer */
+#tenant-eyes { position: absolute; top: 46%; left: 50%; transform: translate(-50%, -50%) scale(0.2); opacity: 0; display: flex; gap: 46px; transition: none; }
+#tenant-eyes span { width: 26px; height: 12px; border-radius: 50%; background: radial-gradient(ellipse, #fff 0 25%, #d9d2b0 45%, rgba(200,190,150,0) 75%); box-shadow: 0 0 18px rgba(255,250,220,0.55); animation: tenantBlink 4s infinite; }
+#hide-overlay.restless #tenant-eyes { animation: eyeJitter 0.12s infinite; }
+@keyframes eyeJitter { 0% { margin-left: 0; margin-top: 0; } 50% { margin-left: 4px; margin-top: -3px; } 100% { margin-left: -3px; margin-top: 2px; } }
