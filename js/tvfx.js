@@ -15,7 +15,8 @@
   let nImg = null;
 
   let phase = 'none', t = 0, onBlack = null, onDone = null;
-  const OFF = 0.5, BLACK = 0.45, ON = 0.65;
+  const OFF = 0.16, BLACK = 1.9, ON = 0.65;
+
 
   function size() {
     cv.width = Math.max(320, Math.round(window.innerWidth));
@@ -37,21 +38,84 @@
     ng.putImageData(nImg, 0, 0);
   }
 
+  // dark silhouettes drawn into the red (sc = size in px, centred at 0,0)
+  const SIL = {
+    siren(g, s, k) {
+      g.fillStyle = 'rgba(10,0,0,0.92)'; g.strokeStyle = 'rgba(10,0,0,0.92)'; g.lineCap = 'round';
+      g.lineWidth = s * 0.025; g.beginPath(); g.moveTo(0, -s * 0.2); g.lineTo(0, s * 0.6); g.stroke();
+      [-1, 1].forEach(d => {
+        g.beginPath(); g.moveTo(d * s * 0.03, -s * 0.24); g.lineTo(d * s * 0.36, -s * 0.42); g.lineTo(d * s * 0.36, -s * 0.06); g.closePath(); g.fill();
+        g.fillStyle = 'rgba(255,40,20,0.55)'; g.beginPath(); g.ellipse(d * s * 0.36, -s * 0.24, s * 0.04, s * 0.17, 0, 0, 7); g.fill();
+        g.fillStyle = 'rgba(10,0,0,0.92)';
+      });
+      g.lineWidth = s * 0.012;
+      for (let i = 0; i < 9; i++) { g.beginPath(); g.moveTo(-s * 0.15, s * 0.05 + i * s * 0.05); g.lineTo(s * 0.15, s * 0.05 + i * s * 0.05 + (Math.random() - 0.5) * s * 0.02); g.stroke(); }
+    },
+    tenant(g, s, k) {
+      g.fillStyle = 'rgba(10,0,0,0.85)'; g.fillRect(-s * 0.35, -s * 0.5, s * 0.7, s * 1.0);
+      g.fillStyle = 'rgba(255,230,200,0.95)';
+      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(d * s * 0.11, -s * 0.08, s * 0.07, s * 0.03 + Math.random() * s * 0.004, 0, 0, 7); g.fill(); });
+      g.strokeStyle = 'rgba(255,200,180,0.7)'; g.lineWidth = s * 0.008;
+      g.beginPath(); for (let i = 0; i <= 12; i++) { const x = -s * 0.18 + i * s * 0.03; g.lineTo(x, s * 0.1 + (i % 2 ? s * 0.035 : 0)); } g.stroke();
+    },
+    silent(g, s, k) {
+      g.fillStyle = 'rgba(10,0,0,0.9)';
+      g.beginPath(); g.ellipse(0, -s * 0.38, s * 0.06, s * 0.09, 0, 0, 7); g.fill();
+      g.fillRect(-s * 0.07, -s * 0.28, s * 0.14, s * 0.45);
+      g.fillRect(-s * 0.06, s * 0.17, s * 0.04, s * 0.45); g.fillRect(s * 0.02, s * 0.17, s * 0.04, s * 0.45);
+      g.fillRect(-s * 0.11, -s * 0.26, s * 0.03, s * 0.5); g.fillRect(s * 0.08, -s * 0.26, s * 0.03, s * 0.5);
+    },
+    moth(g, s, k) {
+      g.fillStyle = 'rgba(10,0,0,0.9)';
+      const f = Math.sin(k * 60) * 0.06;
+      [-1, 1].forEach(d => { g.beginPath(); g.moveTo(0, -s * 0.12); g.lineTo(d * s * (0.45 + f), -s * 0.38); g.lineTo(d * s * (0.52 + f), s * 0.02); g.lineTo(d * s * 0.3, s * 0.3); g.lineTo(0, s * 0.1); g.fill(); });
+      g.beginPath(); g.ellipse(0, -s * 0.28, s * 0.05, s * 0.08, 0, 0, 7); g.fill();
+      g.fillRect(-s * 0.04, -s * 0.2, s * 0.08, s * 0.7);
+    },
+    exposure(g, s, k) {
+      g.filter = 'blur(' + Math.round(s * 0.01) + 'px)';
+      g.fillStyle = 'rgba(10,0,0,0.9)';
+      g.beginPath(); g.ellipse(0, -s * 0.05, s * 0.22, s * 0.3, 0, 0, 7); g.fill();
+      g.filter = 'none';
+      g.fillStyle = 'rgba(255,60,40,0.6)';
+      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(d * s * 0.08, -s * 0.1, s * 0.035, s * 0.06, 0, 0, 7); g.fill(); });
+      g.beginPath(); g.ellipse(0, s * 0.12, s * 0.06, s * 0.035, 0, 0, 7); g.fill();
+    },
+  };
+
   const FX = {
     // called every frame while the player is dying (k: seconds since death)
-    dying(k) {
+    dying(k, cause) {
       phase = 'dying';
       const W = cv.width, H = cv.height;
       g.clearRect(0, 0, W, H);
-      const red = Math.min(1, k / 1.1);
-      const stat = Math.max(0, Math.min(1, (k - 0.9) / 1.5));
-      // red flood, heavier at the edges
-      const gr = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.1, W / 2, H / 2, Math.max(W, H) * 0.7);
-      gr.addColorStop(0, `rgba(150,0,0,${red * 0.45})`);
-      gr.addColorStop(1, `rgba(110,0,0,${red * 0.85})`);
+      // 1) instant red flood
+      const red = Math.min(1, k / 0.12);
+      g.fillStyle = `rgba(150,0,0,${0.78 * red})`; g.fillRect(0, 0, W, H);
+      const gr = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.15, W / 2, H / 2, Math.max(W, H) * 0.7);
+      gr.addColorStop(0, 'rgba(200,20,10,0.15)'); gr.addColorStop(1, `rgba(40,0,0,${0.7 * red})`);
       g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      // 2) the thing that got you, burned into the red
+      if (k > 0.15 && k < 1.9) {
+        const a = Math.min(1, (k - 0.15) / 0.12) * (k > 1.3 ? Math.max(0, 1 - (k - 1.3) / 0.6) : 1);
+        const jx = (Math.random() - 0.5) * W * 0.012, jy = (Math.random() - 0.5) * H * 0.012;
+        const sc = Math.min(W, H) * (0.9 + (k - 0.15) * 0.12);
+        const draw = SIL[cause] || SIL.siren;
+        // a smeared ghost image behind it, for that distorted, burned-in look
+        g.save(); g.globalAlpha = a * 0.35; g.translate(W / 2 - jx * 4 + W * 0.012, H / 2 + jy * 3); g.scale(1.06, 1.06); draw(g, sc, k); g.restore();
+        g.save(); g.globalAlpha = a; g.translate(W / 2 + jx, H / 2 + jy); draw(g, sc, k);
+        // scratches across the figure
+        g.strokeStyle = 'rgba(15,0,0,0.6)'; g.lineWidth = Math.max(1, sc * 0.004);
+        for (let i = 0; i < 26; i++) {
+          const x = (Math.random() - 0.5) * sc * 0.9, y = (Math.random() - 0.5) * sc * 1.1;
+          g.beginPath(); g.moveTo(x, y); g.lineTo(x + (Math.random() - 0.5) * sc * 0.25, y + (Math.random() - 0.5) * sc * 0.25); g.stroke();
+        }
+        g.restore();
+      }
+      // 3) red static creeps in, then 4) it turns grey
+      const stat = Math.max(0, Math.min(1, (k - 1.2) / 0.7));
       if (stat > 0) {
-        makeNoise(1 - Math.max(0, stat - 0.75) * 2);
+        makeNoise(k < 1.9 ? 1 : 0);
         g.globalAlpha = stat;
         g.imageSmoothingEnabled = false;
         g.drawImage(noise, 0, 0, W, H);
@@ -70,21 +134,10 @@
       if (phase === 'off') {
         const p = Math.min(1, t / OFF);
         g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
-        // picture collapses to a bright horizontal line, then to a dot
-        let rw = W, rh = H;
-        if (p < 0.55) rh = Math.max(3, H * Math.pow(1 - p / 0.55, 2.2));
-        else { rh = 3; rw = Math.max(4, W * Math.pow(1 - (p - 0.55) / 0.35, 2)); }
-        const a = p > 0.9 ? 1 - (p - 0.9) / 0.1 : 1;
-        makeNoise(0.2);
-        g.globalAlpha = a;
-        g.drawImage(noise, (W - rw) / 2, (H - rh) / 2, rw, rh);
-        g.fillStyle = `rgba(255,255,255,${0.35 + (p > 0.4 ? 0.6 : 0)})`;
-        g.fillRect((W - rw) / 2, (H - rh) / 2, rw, rh);
-        // glow around the line / dot
-        const gl = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(rw, 40) * 0.6);
-        gl.addColorStop(0, `rgba(220,230,255,${0.5 * a})`); gl.addColorStop(1, 'rgba(220,230,255,0)');
-        g.fillStyle = gl; g.fillRect(0, 0, W, H);
-        g.globalAlpha = 1;
+        const rh = Math.max(2, H * Math.pow(1 - p, 2.5) * 0.55);
+        makeNoise(0);
+        g.drawImage(noise, 0, (H - rh) / 2, W, rh);
+        if (p > 0.6) { g.fillStyle = `rgba(200,200,200,${(p - 0.6) * 1.5})`; g.fillRect(0, (H - rh) / 2, W, rh); }
         if (t >= OFF) { phase = 'black'; t = 0; }
       } else if (phase === 'black') {
         g.fillStyle = '#000'; g.fillRect(0, 0, W, H);

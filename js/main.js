@@ -663,14 +663,14 @@
   }
   function updateDying(dt) {
     dieT += dt;
-    LO.TVFX.dying(dieT);              // red flood, then red static
+    LO.TVFX.dying(dieT, dieCause);    // red flood + the creature, red static, grey static
     if (dieCause !== 'siren') {
       // collapse to the ground
       const k = Math.min(1, dieT / 1.4);
       camera.position.y = Math.max(0.25, camera.position.y - dt * 1.4);
       camera.rotation.z = k * 1.2;
       camera.rotation.x = player.pitch * (1 - k) + 0.2 * k;
-      if (dieT > 2.6) finishDeath();
+      if (dieT > 2.25) finishDeath();
       return;
     }
     siren.neckDip = Math.min(1, dieT) * -0.5;
@@ -681,7 +681,7 @@
     const m = new THREE.Matrix4().lookAt(cam.position, hp, new THREE.Vector3(0, 1, 0));
     const q = new THREE.Quaternion().setFromRotationMatrix(m);
     cam.quaternion.slerp(q, Math.min(1, dt * 6));
-    if (dieT > 2.6 && state === 'dying') finishDeath();
+    if (dieT > 2.25 && state === 'dying') finishDeath();
   }
   function finishDeath() {
     {
