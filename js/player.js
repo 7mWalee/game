@@ -212,7 +212,7 @@
       // stamina
       if (sprinting) {
         this.stamina -= 21 * dt;
-        if (this.stamina <= 0) { this.stamina = 0; this.exhausted = true; this.panting = 1; this.hint && this.hint('You\'re out of breath! Panting makes noise — crouch (C) to hold your breath.'); }
+        if (this.stamina <= 0) { this.stamina = 0; this.exhausted = true; this.panting = 1; }
       } else {
         this.stamina = Math.min(100, this.stamina + (moving ? 9 : 15) * dt);
       }
@@ -236,7 +236,7 @@
     // ---------- battery ----------
     if (this.flashOn) {
       this.battery = Math.max(0, this.battery - dt * 100 / 360);
-      if (this.battery <= 0) { this.flashOn = false; LO.audio.click(false); this.hint && this.hint('The flashlight died. Look for batteries — they glow yellow.'); }
+      if (this.battery <= 0) { this.flashOn = false; LO.audio.click(false); this.hint && this.hint('The flashlight died.'); }
     }
     let flick = 0;
     if (this.flashOn && this.battery < 15 && Math.random() < 0.08) flick = 1;
@@ -460,7 +460,7 @@
     const s = this.nearestHideSpot();
     if (s && s.lockedUntil && s.lockedUntil > performance.now() / 1000) {
       LO.audio.knock && LO.audio.knock();
-      this.hint && this.hint('Something is still in there. It won\'t let you in.');
+      this.hint && this.hint('It won\'t let you in.');
       return;
     }
     if (s) {

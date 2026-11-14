@@ -42,6 +42,7 @@
     }
     A.ctx = ctx;
     A.ready = true;
+    loadSamples();
     startScheduler();
   };
 
@@ -49,15 +50,71 @@
     if (!ctx) return;
     const t = ctx.currentTime;
     master.gain.setTargetAtTime(S.master, t, 0.05);
-    const k = A.still ? 0 : 1, tc = A.still ? 0.15 : 0.8;
-    musicBus.gain.setTargetAtTime(S.music * 0.55 * k, t, tc);
-    if (worldBus) worldBus.gain.setTargetAtTime(k, t, tc);
+    const k = A.still ? 0 : 1, tc = 0.8;
+    if (A.still) {
+      // the moment the wind dies, everything else cuts out instantly
+      [musicBus, voiceBus, worldBus].forEach(b => { if (b) { b.gain.cancelScheduledValues(t); b.gain.setValueAtTime(0, t); } });
+    } else {
+      musicBus.gain.setTargetAtTime(S.music * 0.55, t, tc);
+      if (worldBus) worldBus.gain.setTargetAtTime(1, t, tc);
+    }
     sfxBus.gain.setTargetAtTime(S.sfx, t, 0.05);
-    voiceBus.gain.setTargetAtTime(S.voice * k, t, tc);
+    if (!A.still) voiceBus.gain.setTargetAtTime(S.voice * k, t, tc);
   }
   LO.events.addEventListener('settings', applyVolumes);
 
   A.now = () => (ctx ? ctx.currentTime : 0);
+
+  // ---------- recorded sounds: death screen music, Tenant ringing ----------
+  const samples = {};
+  function loadSamples() {
+    const D = LO.SOUND_DATA;
+    if (!D) return;
+    Object.keys(D).forEach(key => {
+      try {
+        const bin = atob(D[key]);
+        const buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        ctx.decodeAudioData(buf.buffer, b => { samples[key] = b; }, () => {});
+      } catch (e) { /* missing sound is not fatal */ }
+    });
+  }
+  let deathSrc = null, deathStart = 0;
+  A.DEATH_TV_ON = 2.31;     // the click + CRT whine of the TV switching on
+  A.DEATH_TAPE = 3.3;       // whine has faded: the tape starts
+  A.playDeathMusic = function (onEnd) {
+    A.stopDeathMusic();
+    if (!ctx || !samples.death) return false;
+    const s = ctx.createBufferSource();
+    s.buffer = samples.death;
+    // plays once; when it finishes you're sent back to the title screen
+    s.onended = () => { if (deathSrc === s) { deathSrc = null; onEnd && onEnd(); } };
+    const g = ctx.createGain(); g.gain.value = 1.4;
+    s.connect(g); g.connect(musicBus);
+    deathStart = ctx.currentTime + 0.05;
+    s.start(deathStart);
+    deathSrc = s;
+    return true;
+  };
+  // seconds into the death track (unwrapped), or null if it isn't playing
+  A.deathMusicTime = function () {
+    if (!deathSrc) return null;
+    return Math.max(0, ctx.currentTime - deathStart);
+  };
+  A.stopDeathMusic = function () {
+    if (deathSrc) { try { deathSrc.stop(); } catch (e) {} deathSrc = null; }
+  };
+  let ringSrc = null;
+  A.playRinging = function () {
+    A.stopRinging();
+    if (!ctx || !samples.ringing) return;
+    const s = ctx.createBufferSource(); s.buffer = samples.ringing;
+    const g = ctx.createGain(); g.gain.value = 1.0;
+    s.connect(g); g.connect(sfxBus); s.start();
+    ringSrc = s;
+    s.onended = () => { if (ringSrc === s) ringSrc = null; };
+  };
+  A.stopRinging = function () { if (ringSrc) { try { ringSrc.stop(); } catch (e) {} ringSrc = null; } };
 
   // the wind has stopped: silence music, voices and every sound the world makes
   A.setStillness = function (on) {

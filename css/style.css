@@ -449,3 +449,6 @@ body.still #bars label, body.still #health-num, body.still .hide-text {
 #exposure-face { position: fixed; inset: 0; z-index: 46; pointer-events: none; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse, rgba(30,30,30,0.5), #000 80%); }
 #exposure-face svg { height: 90vh; width: auto; filter: blur(2px) contrast(1.4); }
 #exposure-face.go { display: flex; animation: tenantJump 0.7s ease-out forwards; }
+
+/* title screen shot transitions (under the menu, over the 3D view) */
+#title-fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 4; }

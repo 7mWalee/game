@@ -6,7 +6,7 @@
 <title>The Loud One</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@500;700&family=Special+Elite&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=15">
 </head>
 <body>
 
@@ -29,6 +29,7 @@
   </div>
 </div>
 
+<div id="title-fade"></div>
 <!-- Main title screen -->
 <div id="title" class="screen">
   <div class="title-wrap">
@@ -41,7 +42,7 @@
       <button data-action="updates">UPDATE LOG</button>
     </nav>
   </div>
-  <div class="title-footer">v2.0 &nbsp;·&nbsp; stay quiet</div>
+  <div class="title-footer">v2.1 &nbsp;·&nbsp; stay quiet</div>
 </div>
 
 <!-- Graphics options -->
@@ -85,7 +86,15 @@
 <div id="updates" class="screen panel-screen">
   <div class="panel howto updates">
     <h2>UPDATE LOG</h2>
-    <div class="upd"><h3>v2.0 <span>current</span></h3><ul>
+    <div class="upd"><h3>v2.1 <span>current</span></h3><ul>
+      <li>When the wind stops, every sound cuts out instantly, Siren Head included</li>
+      <li>The screen shakes much harder when Siren Head is close</li>
+      <li>New title screen: fading shots of Siren Head and the Moths</li>
+      <li>The hint now stays on screen until that evidence is photographed, and switches to a closer piece if you wander off</li>
+      <li>Death screen music, synced to the TV switching on; when it ends you're sent back to the title</li>
+      <li>Ear ringing after the Tenant throws you out</li>
+    </ul></div>
+    <div class="upd"><h3>v2.0</h3><ul>
       <li>New entity: <b>the Exposure</b>, which lives in your camera's viewfinder</li>
       <li>Moths can only be seen while your flashlight is on</li>
       <li>New death screen: a TV plays a tape of how to survive, next to a notebook with a sketch and tips</li>
@@ -286,16 +295,17 @@
 <div id="fps"></div>
 
 <script src="js/lib/three.min.js"></script>
-<script src="js/settings.js?v=11"></script>
-<script src="js/audio.js?v=11"></script>
-<script src="js/textures.js?v=11"></script>
-<script src="js/world.js?v=11"></script>
-<script src="js/sirenhead.js?v=11"></script>
-<script src="js/player.js?v=11"></script>
-<script src="js/moths.js?v=11"></script>
-<script src="js/deathroom.js?v=14"></script>
-<script src="js/cutscenes.js?v=11"></script>
-<script src="js/main.js?v=11"></script>
-<script src="js/touch.js?v=11"></script>
+<script src="js/settings.js?v=15"></script>
+<script src="audio/sounds.js?v=15"></script>
+<script src="js/audio.js?v=15"></script>
+<script src="js/textures.js?v=15"></script>
+<script src="js/world.js?v=15"></script>
+<script src="js/sirenhead.js?v=15"></script>
+<script src="js/player.js?v=15"></script>
+<script src="js/moths.js?v=15"></script>
+<script src="js/deathroom.js?v=15"></script>
+<script src="js/cutscenes.js?v=15"></script>
+<script src="js/main.js?v=15"></script>
+<script src="js/touch.js?v=15"></script>
 </body>
 </html>

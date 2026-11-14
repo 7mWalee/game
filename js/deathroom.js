@@ -364,9 +364,11 @@
     return out;
   }
 
-  DeathRoom.prototype.update = function (dt, aspect) {
-    this.t += dt;
+  // tExt: seconds into the death music, so the TV switches on exactly with the recorded click
+  DeathRoom.prototype.update = function (dt, aspect, tExt) {
+    if (tExt !== null && tExt !== undefined) this.t = tExt; else this.t += dt;
     const t = this.t;
+    const TV_ON = LO.audio.DEATH_TV_ON || 2.31, TAPE = LO.audio.DEATH_TAPE || 3.3;
     // camera: a slow push-in toward the TV and notebook
     const k = Math.min(1, t / 6);
     const ease = 1 - Math.pow(1 - k, 3);
@@ -384,13 +386,22 @@
     this.coverPivot.rotation.z = (1 - Math.pow(1 - o, 3)) * Math.PI * 0.995;
     // TV picture: static, then the tape (with VHS wear)
     const g = this.tapeCanvas.getContext('2d'), W = 320, H = 240;
-    if (t < 1.6 || Math.random() < 0.012) {
+    if (t < TV_ON) {
+      // the set is still off: a dead black screen with a faint reflection
+      g.fillStyle = '#050606'; g.fillRect(0, 0, W, H);
+      const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, 'rgba(255,255,255,0.05)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      this.glow.intensity = 0;
+    } else if (t < TAPE || Math.random() < 0.012) {
+      // switched on: a white flash that settles into static
+      const flash = Math.max(0, 1 - (t - TV_ON) / 0.25);
       const id = g.createImageData(W, H);
       for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() * 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
       g.putImageData(id, 0, 0);
-      this.glow.color.set(0xb0b8c8); this.glow.intensity = 0.9 + Math.random() * 0.6;
+      if (flash > 0) { g.fillStyle = `rgba(255,255,255,${flash})`; g.fillRect(0, 0, W, H); }
+      this.glow.color.set(0xb0b8c8); this.glow.intensity = 0.9 + Math.random() * 0.6 + flash * 2;
     } else {
-      const T = (t - 1.6) % 8;
+      const T = Math.max(0, t - TAPE) % 8;
       g.fillStyle = '#181a1c'; g.fillRect(0, 0, W, H);
       try { TAPES[this.cause](g, W, H, T); } catch (e) { /* drawing errors shouldn't break the menu */ }
       // VHS overlay

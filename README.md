@@ -58,6 +58,7 @@ js/moths.js       the Moths
 js/deathroom.js   death screen (TV tape + notebook)
 js/cutscenes.js   opening and ending cutscenes
 js/main.js        game flow, menus and main loop
+audio/sounds.js   recorded sounds: death screen music, Tenant ear-ringing (MP3, base64)
 js/lib/three.min.js  three.js r149 (MIT)
 ```
 

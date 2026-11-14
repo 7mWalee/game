@@ -7,7 +7,7 @@
   const $ = id => document.getElementById(id);
   const EVIDENCE_NEEDED = 5;
 
-  let renderer, scene, camera, world, siren, player, moths, deathRoom, deathShown = false;
+  let renderer, scene, camera, world, siren, player, moths, deathRoom, deathShown = false, deathTimer = null, titleSpot = null;
   let state = 'gate';          // gate | title | opening | play | paused | dying | dead | ending | credits
   let cutscene = null, cutCtx = null;
   let menuReturn = 'title';    // which screen an options panel goes back to
@@ -38,7 +38,7 @@
     });
     if (!best) return;
     hintTarget = best;
-    hintUntil = gameTime + HINT_SHOW;
+    hintUntil = Infinity;              // stays up until that piece is photographed
     lastEvidenceTime = gameTime;           // next hint needs another 3 minutes
     A.pickup();
   }
@@ -54,7 +54,19 @@
     }
     const tb = $('t-hint'); if (tb) { tb.textContent = btn.textContent; tb.classList.toggle('on', ready); }
     const box = $('hint-arrow');
-    if (hintTarget && gameTime < hintUntil && !hintTarget.found) {
+    if (hintTarget && hintTarget.found) hintTarget = null;
+    if (hintTarget) {
+      // wandered off? point at whatever is closest now instead
+      let best = hintTarget, bd = Math.hypot(hintTarget.pos.x - player.pos.x, hintTarget.pos.z - player.pos.z);
+      const cur = bd;
+      world.evidence.forEach(e => {
+        if (e.found) return;
+        const d = Math.hypot(e.pos.x - player.pos.x, e.pos.z - player.pos.z);
+        if (d < bd) { bd = d; best = e; }
+      });
+      if (best !== hintTarget && cur - bd > 20) hintTarget = best;
+    }
+    if (hintTarget) {
       box.style.display = 'block';
       const dx = hintTarget.pos.x - player.pos.x, dz = hintTarget.pos.z - player.pos.z;
       // angle relative to where the player is facing (camera looks down -z at yaw 0)
@@ -110,18 +122,18 @@
     siren = new LO.SirenHead(scene, world);
     if (moths) moths.dispose();
     moths = new LO.Moths(scene, world);
+    titleSpot = new THREE.SpotLight(0xfff1d6, 0, 90, 0.42, 0.5, 1.2);
+    scene.add(titleSpot, titleSpot.target);
     moths.onShriek = pos => {
       if (state !== 'play') return;
       // a moth's shriek carries a long way and it makes him angry
       siren.anger = Math.min(100, siren.anger + 35);
       siren.hearNoise(pos, 90);
       player.shake = Math.max(player.shake, 0.5);
-      hintOnce('moth', 'A MOTH. Don\'t keep your light on them — it shrieked, and he heard it.', 6500);
     };
     player = new LO.Player(camera, world, scene);
     player.hint = showHint;
     player.onPhoto = onPhoto;
-    player.onHide = () => hintOnce('hide', 'Hidden. You make no sound in here — but don\'t stay long. Something else lives in here.');
     player.onDamage = (amount, cause) => {
       A.hurt();
       const d = $('damage');
@@ -135,42 +147,36 @@
       if (kind === 'lunge') {
         A.exposureLunge();
         f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
-        showHint('THE EXPOSURE lunged out of the lens. Don\'t keep your camera up so long.', 6000);
       } else {
         A.staticBurst(null, 0.8, 0.4);
-        showHint('The flash banished it... and burned you.', 4500);
       }
     };
     player.onRockLand = pos => {
       if (state !== 'play') return;
-      if (siren.hearNoise(pos, 45)) hintOnce('rockworked', 'He heard the rock. Move while he checks it out.', 5000);
+      siren.hearNoise(pos, 45);
     };
     siren.onEcho = d => {
       if (state !== 'play' || A.still) return;
       const r = $('echo-ring');
       r.classList.remove('go'); void r.offsetWidth; r.classList.add('go');
-      hintOnce('echo', 'He pinged the town. He knows roughly where you are now, even if you\'re silent — keep moving.', 7000);
     };
     player.onKicked = () => {
       A.tenantScream();
+      A.playRinging();      // your ears ring after it throws you out
       const f = $('tenant-face');
       f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
-      showHint('THE TENANT threw you out! That was loud — he may have heard it. Never hide too long.', 6000);
     };
     siren.onCatch = onCaught;
     siren.onStep = p => {
       if (state !== 'play') return;
       const d = Math.hypot(p.x - player.pos.x, p.z - player.pos.z);
-      if (d < 70) player.shake = Math.max(player.shake, (1 - d / 70) * 0.25);
+      if (d < 80) player.shake = Math.max(player.shake, Math.pow(1 - d / 80, 1.4) * 0.95);
     };
     siren.onStateChange = s => {
       if (state !== 'play') return;
-      if (s === 'investigate') hintOnce('heard', 'He heard you. Stop moving, switch off your light, or hide.');
       if (s === 'hunt') {
         A.say('player', ['Oh no. Oh no no no.', 'He\'s coming. Quiet. Be quiet.', 'Don\'t move. Don\'t breathe.'][(Math.random() * 3) | 0]);
-        hintOnce('angry', 'HE\'S ANGRY. If he hears you now, he will get you. Go completely silent or hide!');
       }
-      if (s === 'search') hintOnce('search', 'He lost you. Stay silent until he wanders off.');
     };
     parkedCar = null;
     worldDirty = false;
@@ -297,21 +303,91 @@
     siren.neckDip = 0; siren.armRaise = 0;
     siren.root.rotation.x = 0;
     world.hemi.intensity = 0.3; world.moonLight.intensity = 0.35;
+    titleT = 0;
+  }
+  // ---- title screen: slow shots of Siren Head and the Moths, fading through black
+  const SHOT_LEN = 7;
+  const _tv = new THREE.Vector3();
+  function titleMoth(i, x, z, faceX, faceZ, t) {
+    const m = moths.moths[i];
+    if (!m) return;
+    m.g.visible = true;
+    m.g.position.set(x, 0.12, z);
+    m.g.rotation.y = Math.atan2(faceX - x, faceZ - z) + Math.sin(t * 0.7 + i) * 0.08;
+    const q = 0.15 + Math.max(0, Math.sin(t * 2.3 + i * 2)) * 0.25;
+    m.wings.forEach(w => { w.mesh.rotation.y = w.side * (0.5 + q + Math.sin(t * 30 + w.side) * q * 0.25); });
+    m.head.rotation.z = Math.sin(t * 9 + i) * 0.04;
+  }
+  // an alley spot with nothing between the camera and the moth
+  let mothSpotCache = null;
+  function titleMothSpot() {
+    if (mothSpotCache && mothSpotCache.world === world) return mothSpotCache;
+    const blocked = (x, z) => world.colliders.some(c => c.maxY > 0.5 && x > c.minX - 0.4 && x < c.maxX + 0.4 && z > c.minZ - 0.4 && z < c.maxZ + 0.4);
+    let found = { x: LO.World.BLOCK_C[3], z: LO.World.BLOCK_C[2] };
+    outer: for (const bx of LO.World.BLOCK_C) for (const bz of LO.World.BLOCK_C) for (let o = -12; o <= 12; o += 2) {
+      const x = bx + o, z = bz;
+      let clear = true;
+      for (let t = 0; t <= 9; t += 0.5) if (blocked(x - t, z)) { clear = false; break; }
+      if (clear) { found = { x, z }; break outer; }
+    }
+    mothSpotCache = Object.assign(found, { world });
+    return mothSpotCache;
   }
   function updateTitle(dt) {
     titleT += dt;
+    const shot = Math.floor(titleT / SHOT_LEN) % 5, k = (titleT % SHOT_LEN) / SHOT_LEN, lt = titleT % SHOT_LEN;
+    // fade to black at the start and end of every shot
+    const f = lt < 1.2 ? 1 - lt / 1.2 : lt > SHOT_LEN - 1.2 ? (lt - (SHOT_LEN - 1.2)) / 1.2 : 0;
+    $('title-fade').style.opacity = f;
     world.updateWind(dt, 0.8, camera.position, titleT);
-    siren.speedNow = 0.6 + Math.sin(titleT * 0.3) * 0.6;
+    moths.moths.forEach(m => { m.g.visible = false; });
+    titleSpot.intensity = 0;
+    siren.root.visible = true;
+    siren.scripted = true;
+    const S0 = world.STREETS;
+    if (shot === 0) {                                  // looking up at him in the street
+      siren.pos.set(S0[3], 0, 20); siren.yaw = Math.PI * 1.1; siren.speedNow = 0; siren.glowOverride = 0.35;
+      camera.position.set(S0[3] - 3, 1.3 + k * 0.8, -6 + k * 5);
+      camera.lookAt(S0[3] + 7, 9 + k * 3, 20);
+      titleSpot.position.set(S0[3] - 3, 1, -4); titleSpot.target.position.set(S0[3], 10, 20); titleSpot.intensity = 9;
+    } else if (shot === 1) {                           // close on the horns
+      siren.pos.set(S0[3], 0, 20); siren.yaw = Math.PI * 1.1; siren.speedNow = 0; siren.glowOverride = 0.55 + Math.sin(titleT * 2) * 0.1;
+      siren.update(0, null, titleT);
+      siren.root.updateMatrixWorld(true);
+      siren.headWorldPos(_tv);
+      camera.position.set(_tv.x - 6 + k * 2, _tv.y - 1.5, _tv.z - 8 + k);
+      camera.lookAt(_tv.x, _tv.y - 0.3, _tv.z);
+    } else if (shot === 2) {                           // a moth at the end of an alley, caught in a torch beam
+      siren.root.visible = false;
+      const spot = titleMothSpot();
+      const mx = spot.x, mz = spot.z;
+      camera.position.set(mx - 8 + k * 2, 1.6, mz);
+      titleMoth(0, mx, mz, camera.position.x, camera.position.z, titleT);
+      camera.lookAt(mx, 1.5, mz - 2.8);
+      titleSpot.position.copy(camera.position); titleSpot.target.position.set(mx, 1.4, mz); titleSpot.intensity = 7;
+    } else if (shot === 3) {                           // he walks between the buildings
+      siren.pos.set(S0[2], 0, -40 + k * 14); siren.yaw = 0; siren.speedNow = 2.2; siren.glowOverride = 0.3;
+      camera.position.set(S0[2] - 3.5, 2.2, -72 + k * 3);
+      camera.lookAt(S0[2] + 5, 8, -34 + k * 14);
+      titleSpot.position.set(S0[2] - 3.5, 1.5, -70); titleSpot.target.position.set(S0[2], 9, -34 + k * 14); titleSpot.intensity = 10;
+    } else {                                           // two moths waiting just inside a doorway
+      siren.root.visible = false;
+      const b = world.enterables.find(e => !e.sheriff) || world.enterables[0];
+      const m1 = b.F.point(-0.7, b.hd - 1.6), m2 = b.F.point(0.8, b.hd - 3.2), cp = b.F.point(0.3 * Math.sin(titleT * 0.2), b.hd + 5.5 - k * 1.5);
+      camera.position.set(cp.x, 1.55, cp.z);
+      titleMoth(1, m1.x, m1.z, cp.x, cp.z, titleT);
+      titleMoth(2, m2.x, m2.z, cp.x, cp.z, titleT);
+      const in1 = b.F.point(0, b.hd - 2.2);
+      camera.lookAt(in1.x, 1.5, in1.z);
+      titleSpot.position.copy(camera.position); titleSpot.target.position.set(in1.x, 1.3, in1.z); titleSpot.intensity = 6;
+    }
     siren.update(dt, null, titleT);
-    const a = titleT * 0.04;
-    const tx = world.STREETS[3], tz = world.STREETS[3] + 8;
-    camera.position.set(tx + Math.sin(a + 2.6) * 34, 2.2 + Math.sin(titleT * 0.2) * 0.6, tz + Math.cos(a + 2.6) * 34);
-    camera.lookAt(tx, 10.5, tz);
     world.update(dt, titleT);
   }
 
   function goTitle() {
     if (cutscene) endCutscene();
+    A.stopDeathMusic(); A.stopRinging(); clearTimeout(deathTimer);
     A.stopVoices();
     hideAllScreens();
     if (document.pointerLockElement) document.exitPointerLock();
@@ -337,6 +413,7 @@
   function resetRun() {
     if (worldDirty) buildWorld();
     world.placeEvidence();          // every game the evidence moves (except the sheriff's tape)
+    titleSpot.intensity = 0; siren.root.visible = true; $('title-fade').style.opacity = 0;
     world.pickups.forEach(p => { p.taken = false; p.mesh.visible = true; });
     evidenceCount = 0; endingQueued = false;
     siren.scripted = false;
@@ -347,11 +424,12 @@
     player.reset(world.spawn, Math.PI);
     moths.reset();
     gameTime = 0;
-    lastEvidenceTime = 0; hintUntil = 0;
+    lastEvidenceTime = 0; hintUntil = 0; hintTarget = null;
     updateEvidenceUI();
   }
 
   function startGame(skipIntro) {
+    A.stopDeathMusic(); A.stopRinging(); clearTimeout(deathTimer);
     A.init();
     A.stopVoices();
     hideAllScreens();
@@ -395,7 +473,7 @@
     siren.state = 'wander'; siren.path = [];
     player.reset(world.spawn, Math.PI);
     world.hemi.intensity = world.baseLight.hemi; world.moonLight.intensity = world.baseLight.moon;
-    lastEvidenceTime = gameTime; hintUntil = 0;
+    lastEvidenceTime = gameTime; hintUntil = 0; hintTarget = null;
     player.enabled = true;
     state = 'play';
     show('hud');
@@ -409,8 +487,6 @@
       showHint(`Photograph ${EVIDENCE_NEEDED} pieces of evidence. Raise your camera with ${LO.isTouch ? 'the CAMERA button' : 'RIGHT MOUSE or Q'}.`, 7000);
       A.say('player', 'Okay. Evidence. Footprints, wreckage, anything that proves that thing was here.');
     }, 1800);
-    setTimeout(() => state === 'play' && hintOnce('flash', (LO.isTouch ? 'The LIGHT button' : 'F') + ' toggles the flashlight. He can hear it buzz when he\'s close.', 6000), 10000);
-    setTimeout(() => state === 'play' && hintOnce('meter', 'The white marker on the NOISE bar is how close he is. If your noise passes it, he hears you.', 8000), 18000);
   }
 
   function lockPointer() {
@@ -460,7 +536,8 @@
     if (!ev) return;
     ev.found = true;
     evidenceCount++;
-    lastEvidenceTime = gameTime; hintUntil = 0;
+    lastEvidenceTime = gameTime;
+    if (ev === hintTarget) hintTarget = null;
     A.evidenceSting();
     updateEvidenceUI();
     A.say('player', EVIDENCE_LINES[Math.min(EVIDENCE_LINES.length - 1, evidenceCount - 1)]);
@@ -619,7 +696,14 @@
         deathRoom.show(dieCause);
         deathShown = true;
         A.playMusic(null, 0.3);
-        A.staticBurst(null, 1.6, 0.18);
+        A.stopRinging();
+        const kickToTitle = () => {
+          if (state !== 'dead') return;
+          ui.fadeOut(0.25);
+          setTimeout(goTitle, 300);
+        };
+        clearTimeout(deathTimer);
+        if (!A.playDeathMusic(kickToTitle)) deathTimer = setTimeout(kickToTitle, 58000);
         ui.fadeIn(1.2);
       }, 400);
     }
@@ -636,7 +720,7 @@
     if (windStrength < 0.01) windStrength = 0;
     gustT += dt;
     const gust = Math.max(0, Math.min(1, 0.45 + Math.sin(gustT * 0.31) * 0.3 + Math.sin(gustT * 0.83 + 1.7) * 0.25));
-    A.setWind(0.26 * windStrength, gust, still ? 0.25 : 1.2);
+    A.setWind(still ? 0 : 0.26 * windStrength, gust, still ? 0.01 : 1.2);
     // when the wind dies, everything else dies with it: sounds, voices, text
     A.setStillness(still);
     document.body.classList.toggle('still', still);
@@ -690,7 +774,6 @@
       ex.style.setProperty('--b', (6 - ek * 4).toFixed(1) + 'px');
       ex.classList.toggle('twitch', ek > 0.6);
       A.setExposure(0.2 + ek * 0.8);
-      hintOnce('expo', 'There is something in your lens. Lower the camera — photographing it banishes it, but the flash burns you.', 7000);
     } else {
       ex.style.opacity = 0; ex.classList.remove('twitch');
       A.setExposure(0);
@@ -712,7 +795,6 @@
       so.style.setProperty('--k', k);
       $('so-text').textContent = attacking ? 'MAKE A SOUND' : k < 0.5 ? 'it\'s too quiet...' : 'something is standing very close to you...';
       A.setSilentOne(attacking ? 1 : 0.2 + k * 0.6);
-      hintOnce('silent', 'Something is drawn to complete silence. Make a small noise — click your flashlight or take a step.', 7000);
     } else {
       so.style.opacity = 0; so.classList.remove('attack');
       A.setSilentOne(0);
@@ -738,7 +820,7 @@
     pop.classList.add('show');
     clearTimeout(pop._t);
     pop._t = setTimeout(() => pop.classList.remove('show'), ev ? 3200 : 1800);
-    if (!ev) hintOnce('nothing', 'Nothing useful in that shot. Get closer and centre the evidence — the viewfinder turns green.');
+    if (!ev) hintOnce('nothing', 'Nothing useful in that shot.', 3000);
   }
 
   // ============================================================
@@ -765,6 +847,8 @@
       // music & heartbeat follow the danger
       const d = siren.distToPlayer || 999;
       const near = Math.max(0, 1 - d / 70);
+      // the ground trembles when he's right on top of you
+      if (d < 35 && !A.still) player.shake = Math.max(player.shake, Math.pow(1 - d / 35, 1.5) * 0.3);
       if (siren.state === 'hunt') A.playMusic('chase', 1);
       else A.playMusic('explore', 4);
       A.intensity = Math.min(1, near * 0.7 + (siren.state === 'investigate' ? 0.4 : siren.state === 'search' ? 0.5 : 0));
@@ -786,7 +870,7 @@
 
     if (world && world.sky) { world.sky.position.copy(camera.position); world.stars.position.copy(camera.position); }
     if (state === 'dead') {
-      if (deathShown) { deathRoom.update(dt, window.innerWidth / window.innerHeight); deathRoom.render(renderer); }
+      if (deathShown) { deathRoom.update(dt, window.innerWidth / window.innerHeight, A.deathMusicTime()); deathRoom.render(renderer); }
     } else if (state !== 'credits') renderer.render(scene, camera);
     if (pendingCapture) capturePhoto();
 
@@ -865,7 +949,7 @@
     gate.addEventListener('click', leaveGate);
     window.addEventListener('keydown', leaveGate);
     // expose for debugging
-    LO.debug = { get deathRoom() { return deathRoom; }, setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, get moths() { return moths; }, startGame, startEnding, beginPlay };
+    LO.debug = { setTitleT(t) { titleT = t; }, get deathRoom() { return deathRoom; }, setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, get moths() { return moths; }, startGame, startEnding, beginPlay };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
