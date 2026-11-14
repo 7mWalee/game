@@ -764,9 +764,9 @@
     // the Tenant grows restless the longer you hide
     const tf = Math.min(1, player.hideTime / LO.TENANT_LIMIT);
     if (player.hidden) {
-      // two glowing eyes open in the dark and keep coming closer until they reach you
+      // a red eye opens in the dark and keeps coming closer until it reaches you
       const eye = Math.max(0, (tf - 0.25) / 0.75);
-      const ex = $('tenant-eyes');
+      const ex = $('tenant-eye');
       ex.style.opacity = eye > 0 ? Math.min(1, 0.35 + eye) : 0;
       ex.style.transform = `translate(-50%, -50%) scale(${(0.18 + Math.pow(eye, 1.6) * 3.6).toFixed(3)})`;
       $('tenant-red').style.opacity = (Math.pow(eye, 1.3) * 0.95).toFixed(3);

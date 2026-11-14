@@ -58,10 +58,10 @@
       for (let i = 0; i < 9; i++) { g.beginPath(); g.moveTo(-s * 0.15, s * 0.05 + i * s * 0.05); g.lineTo(s * 0.15, s * 0.05 + i * s * 0.05 + (Math.random() - 0.5) * s * 0.02); g.stroke(); }
     },
     tenant(g, s, k) {
-      g.fillStyle = 'rgba(10,0,0,0.85)'; g.fillRect(-s * 0.35, -s * 0.5, s * 0.7, s * 1.0);
-      g.fillStyle = 'rgba(255,240,215,0.95)'; g.shadowColor = 'rgba(255,240,200,0.9)'; g.shadowBlur = s * 0.05;
-      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(d * s * 0.11, -s * 0.08, s * 0.075, s * 0.032 + Math.random() * s * 0.004, 0, 0, 7); g.fill(); });
-      g.shadowBlur = 0;
+      g.fillStyle = 'rgba(10,0,0,0.92)';
+      g.beginPath(); g.moveTo(-s * 0.55, 0); g.quadraticCurveTo(0, -s * 0.42, s * 0.55, 0); g.quadraticCurveTo(0, s * 0.42, -s * 0.55, 0); g.fill();
+      g.fillStyle = 'rgba(255,50,30,0.8)'; g.beginPath(); g.ellipse(0, 0, s * 0.17, s * 0.17, 0, 0, 7); g.fill();
+      g.fillStyle = 'rgba(0,0,0,0.95)'; g.beginPath(); g.ellipse(0, 0, s * 0.035, s * 0.14 + Math.random() * s * 0.01, 0, 0, 7); g.fill();
     },
     silent(g, s, k) {
       g.fillStyle = 'rgba(10,0,0,0.9)';
