@@ -112,6 +112,14 @@
     player.hint = showHint;
     player.onPhoto = onPhoto;
     player.onHide = () => hintOnce('hide', 'Hidden. You make no sound in here — but don\'t stay long. Something else lives in here.');
+    player.onDamage = (amount, cause) => {
+      A.hurt();
+      const d = $('damage');
+      d.style.transition = 'none'; d.style.opacity = 0.9;
+      setTimeout(() => { d.style.transition = 'opacity 0.8s'; d.style.opacity = 0; }, 60);
+      if (cause === 'silent') A.silentHit();
+    };
+    player.onDeath = cause => dieBy(cause);
     player.onKicked = () => {
       A.tenantScream();
       const f = $('tenant-face');
@@ -277,7 +285,8 @@
     if (document.pointerLockElement) document.exitPointerLock();
     player.enabled = false;
     player.flashOn = false;
-    A.setFlashlightBuzz(false); A.setBreathing(0); A.setHeartbeat(0); A.setTenant(0);
+    A.setFlashlightBuzz(false); A.setBreathing(0); A.setHeartbeat(0); A.setTenant(0); A.setSilentOne(0);
+    $('silent-one').style.opacity = 0;
     if (worldDirty || state === 'ending' || state === 'credits' || state === 'dead') buildWorld();
     setupTitleScene();
     state = 'title';
@@ -389,7 +398,7 @@
     player.enabled = false;
     show('pause');
     if (window.speechSynthesis) try { speechSynthesis.pause(); } catch (e) {}
-    A.setFlashlightBuzz(false); A.setBreathing(0); A.setTenant(0);
+    A.setFlashlightBuzz(false); A.setBreathing(0); A.setTenant(0); A.setSilentOne(0);
   }
   function resume() {
     hideAllScreens();
@@ -441,6 +450,7 @@
     siren.anger = 0;
     siren.setState('wander');
     siren.catchDisabled = true;
+    player.noSilent = true;
     setTimeout(async () => {
       await A.say('player', 'That\'s enough. Sending everything to the county sheriff now.');
       await A.say('radio', 'Hollow Creek caller, we... received your photos. Stay where you are. All units, heavy response to Hollow Creek. This is not a drill.');
@@ -479,8 +489,42 @@
 
   // ---------- death ----------
   let dieT = 0;
+  let dieCause = 'siren';
+  const DEATHS = {
+    siren: { title: 'YOU WERE TOO LOUD', tips: [
+      'He only hunts what he can hear. Stand still and switch off your light.',
+      'Sprinting is the loudest thing you can do. Crouch-walk near him.',
+      'Hide in dumpsters and lockers — inside, you make no sound at all.',
+      'Watch the marker on the noise bar: it shows how close he is.',
+      'Out of breath? Crouch to hold your breath.',
+    ] },
+    silent: { title: 'YOU WERE TOO QUIET', tips: [
+      'The Silent One comes for anyone who stays silent for 30 seconds. Make a small sound — click your flashlight or take a step.',
+      'Hiding is silent too. Don\'t wait out Siren Head forever.',
+    ] },
+    tenant: { title: 'YOU OVERSTAYED YOUR WELCOME', tips: [
+      'The Tenant takes 30 HP every time it throws you out. Leave before the red bar fills.',
+      'Your health never comes back. Every hit counts.',
+    ] },
+  };
+  // death by damage (the Silent One / the Tenant)
+  function dieBy(cause) {
+    if (state !== 'play') return;
+    dieCause = cause;
+    state = 'dying';
+    dieT = 0;
+    player.enabled = false;
+    player.flashOn = false;
+    A.stopVoices();
+    A.setTenant(0);
+    if (document.pointerLockElement) document.exitPointerLock();
+    A.playMusic(null, 0.5);
+    if (cause === 'silent') { A.silentHit(); A.setSilentOne(1); } else A.tenantScream();
+    $('damage').style.transition = 'opacity 0.3s'; $('damage').style.opacity = 1;
+  }
   function onCaught() {
     if (state !== 'play' || siren.catchDisabled) return;
+    dieCause = 'siren';
     state = 'dying';
     dieT = 0;
     player.enabled = false;
@@ -499,6 +543,15 @@
   }
   function updateDying(dt) {
     dieT += dt;
+    if (dieCause !== 'siren') {
+      // collapse to the ground
+      const k = Math.min(1, dieT / 1.4);
+      camera.position.y = Math.max(0.25, camera.position.y - dt * 1.4);
+      camera.rotation.z = k * 1.2;
+      camera.rotation.x = player.pitch * (1 - k) + 0.2 * k;
+      if (dieT > 2.6) finishDeath();
+      return;
+    }
     siren.neckDip = Math.min(1, dieT) * -0.5;
     siren.update(dt, null, dieT);
     const hp = siren.headWorldPos();
@@ -507,20 +560,22 @@
     const m = new THREE.Matrix4().lookAt(cam.position, hp, new THREE.Vector3(0, 1, 0));
     const q = new THREE.Quaternion().setFromRotationMatrix(m);
     cam.quaternion.slerp(q, Math.min(1, dt * 6));
-    if (dieT > 2.6 && state === 'dying') {
+    if (dieT > 2.6 && state === 'dying') finishDeath();
+  }
+  function finishDeath() {
+    {
+      if (state !== 'dying') return;
       state = 'dead';
+      A.setSilentOne(0);
+      $('silent-one').style.opacity = 0;
       ui.fadeOut(0.3);
       setTimeout(() => {
         hideAllScreens();
         show('death');
         $('damage').style.opacity = 0;
-        const tips = [
-          'He only hunts what he can hear. Stand still and switch off your light.',
-          'Sprinting is the loudest thing you can do. Crouch-walk near him.',
-          'Hide in dumpsters and lockers — inside, you make no sound at all.',
-          'Watch the marker on the noise bar: it shows how close he is.',
-          'Out of breath? Crouch to hold your breath.',
-        ];
+        const D = DEATHS[dieCause] || DEATHS.siren;
+        $('death-title').textContent = D.title;
+        const tips = D.tips;
         $('death-tip').textContent = tips[(Math.random() * tips.length) | 0];
       }, 400);
     }
@@ -563,6 +618,28 @@
       $('hide-overlay').classList.toggle('restless', tf >= 0.75);
       A.setTenant(Math.max(0, (tf - 0.3) / 0.7));
     } else A.setTenant(0);
+
+    // health
+    $('health-fill').style.width = player.health + '%';
+    $('health-num').textContent = Math.ceil(player.health);
+    $('health-fill').parentNode.classList.toggle('low', player.health <= 30);
+
+    // the Silent One: warnings from 20s of silence, attack from 30s
+    const st2 = player.silentTime, W2 = LO.SILENT.WARN, AT = LO.SILENT.ATTACK;
+    const so = $('silent-one');
+    if (st2 >= W2) {
+      const k = Math.min(1, (st2 - W2) / (AT - W2));
+      const attacking = st2 >= AT;
+      so.style.opacity = attacking ? 1 : 0.25 + k * 0.6;
+      so.classList.toggle('attack', attacking);
+      so.style.setProperty('--k', k);
+      $('so-text').textContent = attacking ? 'MAKE A SOUND' : k < 0.5 ? 'it\'s too quiet...' : 'something is standing very close to you...';
+      A.setSilentOne(attacking ? 1 : 0.2 + k * 0.6);
+      hintOnce('silent', 'Something is drawn to complete silence. Make a small noise — click your flashlight or take a step.', 7000);
+    } else {
+      so.style.opacity = 0; so.classList.remove('attack');
+      A.setSilentOne(0);
+    }
     show('viewfinder', player.zoom > 0.5);
     if (player.zoom > 0.5) {
       const vf = player.vfTarget;

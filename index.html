@@ -83,7 +83,8 @@
       <tr><td>Right mouse / Q</td><td>Raise camera</td></tr>
       <tr><td>Left mouse</td><td>Take photo (while camera raised)</td></tr>
       <tr><td>E</td><td>Hide / interact / pick up</td></tr>
-      <tr><td colspan="2" style="color:#d6cfc0">Don't hide too long — <b>the Tenant</b> lives in the hiding spots and will throw you out (loudly).</td></tr>
+      <tr><td colspan="2" style="color:#d6cfc0">You have <b>100 HP</b> and it never comes back. Don't stay <b>completely silent for too long</b> either — after 20 seconds <b>the Silent One</b> starts to come for you, and at 30 seconds it attacks (5 HP per second) until you make a sound.</td></tr>
+      <tr><td colspan="2" style="color:#d6cfc0">Don't hide too long — <b>the Tenant</b> lives in the hiding spots and will throw you out (loudly), taking <b>30 HP</b>.</td></tr>
       <tr><td>H</td><td>Hint (unlocks after 3 minutes without finding evidence)</td></tr>
       <tr><td>Esc</td><td>Pause</td></tr>
     </table>
@@ -122,6 +123,11 @@
     </div>
   </div>
   <div id="bars">
+    <div class="bar-row">
+      <label>HEALTH</label>
+      <div class="bar health"><div id="health-fill"></div></div>
+      <span id="health-num">100</span>
+    </div>
     <div class="bar-row">
       <label>NOISE</label>
       <div class="bar noise"><div id="noise-fill"></div><div class="bar-mark" style="left:35%"></div></div>
@@ -166,6 +172,15 @@
   <div class="vf-film" id="vf-film">FILM ∞</div>
 </div>
 <div id="flash"></div>
+<!-- The Silent One (Phenomenon-249) -->
+<div id="silent-one">
+  <div class="so-dark"></div>
+  <svg class="so-figure" viewBox="0 0 100 300" aria-hidden="true">
+    <path d="M50 4 C38 4 32 16 33 30 C34 42 40 50 44 54 L36 62 C26 70 22 100 20 150 L14 240 L22 240 L32 160 L38 120 L36 200 L34 296 L44 296 L50 190 L56 296 L66 296 L64 200 L62 120 L68 160 L78 240 L86 240 L80 150 C78 100 74 70 64 62 L56 54 C60 50 66 42 67 30 C68 16 62 4 50 4Z" fill="#cfcac0"/>
+    <ellipse cx="50" cy="30" rx="11" ry="15" fill="#e6e2d8"/>
+  </svg>
+  <div class="so-text" id="so-text"></div>
+</div>
 <div id="tenant-face">
   <svg viewBox="0 0 200 260" aria-hidden="true">
     <defs><radialGradient id="tf" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#d9d4c8"/><stop offset="1" stop-color="#5a544c"/></radialGradient></defs>
@@ -209,7 +224,7 @@
 <!-- Death -->
 <div id="death" class="screen">
   <div class="death-inner">
-    <h2>YOU WERE TOO LOUD</h2>
+    <h2 id="death-title">YOU WERE TOO LOUD</h2>
     <p id="death-tip">He only hunts what he can hear.</p>
     <nav class="menu">
       <button data-action="retry">TRY AGAIN</button>

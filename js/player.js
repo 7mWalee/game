@@ -11,7 +11,11 @@
     flashlight: 9, crouch: 4, walk: 16, sprint: 46, panting: 6,
     jump: 30, land: 36, shutter: 14, hide: 5, kicked: 42,
   };
-  const TENANT_LIMIT = 14;   // seconds you can hide before the Tenant loses patience
+  const TENANT_LIMIT = 14;
+  const TENANT_DAMAGE = 30;
+  // THE SILENT ONE (Phenomenon-249): drawn to complete silence
+  const SILENT_WARN = 20, SILENT_ATTACK = 30, SILENT_DAMAGE = 5, SILENT_TICK = 1.0;
+  LO.SILENT = { WARN: SILENT_WARN, ATTACK: SILENT_ATTACK };   // seconds you can hide before the Tenant loses patience
   LO.TENANT_LIMIT = TENANT_LIMIT;
   LO.NOISE = NOISE;
 
@@ -64,6 +68,10 @@
     this.cameraUp = false;
     this.hidden = null;
     this.hideTime = 0;
+    this.health = 100;          // never regenerates
+    this.silentTime = 0;
+    this.silentTick = 0;
+    this.noSilent = false;
     this.spike = 0;
     this.noiseRadius = 0;
     this.stepPhase = 0;
@@ -233,6 +241,20 @@
     if (indoor) n *= 0.6;
     if (this.hidden) n = this.spike > 0 ? this.spike * 0.5 : 0;
     this.noiseRadius = n;
+
+    // ---------- THE SILENT ONE ----------
+    // any sound at all resets it; total silence (including hiding) feeds it
+    if (n > 0 || this.noSilent) { this.silentTime = 0; this.silentTick = 0; }
+    else {
+      this.silentTime += dt;
+      if (this.silentTime >= SILENT_ATTACK) {
+        this.silentTick -= dt;
+        if (this.silentTick <= 0) {
+          this.silentTick = SILENT_TICK;
+          this.damage(SILENT_DAMAGE, 'silent');
+        }
+      }
+    }
     LO.audio.setBreathing(Math.min(1, this.panting * 1.2) * (this.crouch > 0.5 && !this.moving ? 0.15 : 1));
 
     // ---------- pickups ----------
@@ -319,6 +341,15 @@
     this.shake = Math.max(this.shake, 0.9);
     this.hideTime = TENANT_LIMIT * 0.6;              // still restless if you dive straight back in
     this.onKicked && this.onKicked();
+    this.damage(TENANT_DAMAGE, 'tenant');
+  };
+
+  Player.prototype.damage = function (amount, cause) {
+    if (this.health <= 0) return;
+    this.health = Math.max(0, this.health - amount);
+    this.shake = Math.max(this.shake, 0.3);
+    this.onDamage && this.onDamage(amount, cause);
+    if (this.health <= 0) this.onDeath && this.onDeath(cause);
   };
 
   Player.prototype.nearestHideSpot = function () {

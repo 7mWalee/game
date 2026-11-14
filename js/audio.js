@@ -348,6 +348,45 @@
     });
   };
 
+  // ---------- THE SILENT ONE ----------
+  let silent = null;
+  A.setSilentOne = function (amount) {
+    if (!ctx) return;
+    if (!silent) {
+      // tinnitus ring + a sub-bass pressure you feel more than hear
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 7400;
+      const og = ctx.createGain(); og.gain.value = 0;
+      const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = 31;
+      const sg = ctx.createGain(); sg.gain.value = 0;
+      o.connect(og); og.connect(sfxBus); sub.connect(sg); sg.connect(sfxBus);
+      o.start(); sub.start();
+      silent = { og, sg, o };
+    }
+    const t = ctx.currentTime, a = Math.max(0, Math.min(1, amount));
+    silent.og.gain.setTargetAtTime(a * a * 0.05, t, 0.4);
+    silent.sg.gain.setTargetAtTime(a * 0.5, t, 0.4);
+    silent.o.frequency.setTargetAtTime(7400 + a * 1200, t, 0.5);
+  };
+  A.silentHit = function () {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const n = noiseSrc(false, false);
+    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1200;
+    const g = ctx.createGain(); env(g, t, 0.002, 0.45, 0.25, 0.0001);
+    n.connect(f); f.connect(g); g.connect(sfxBus); n.start(t); n.stop(t + 0.3);
+    const o = ctx.createOscillator(); o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.3);
+    const g2 = ctx.createGain(); env(g2, t, 0.003, 0.8, 0.3, 0.0001);
+    o.connect(g2); g2.connect(sfxBus); o.start(t); o.stop(t + 0.35);
+  };
+  A.hurt = function () {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const n = noiseSrc(false, false);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(900, t); f.frequency.linearRampToValueAtTime(500, t + 0.3); f.Q.value = 4;
+    const g = ctx.createGain(); env(g, t, 0.01, 0.35, 0.3, 0.0001);
+    n.connect(f); f.connect(g); g.connect(sfxBus); n.start(t); n.stop(t + 0.4);
+  };
+
   // ---------- SIREN HEAD sounds ----------
   // A persistent positional voice for the monster
   A.createMonsterVoice = function () {
