@@ -525,10 +525,10 @@
   const EVIDENCE_LINES = [
     'Got it. They can\'t call that a gas leak.',
     'That\'s two. Keep going. Quietly.',
-    'Three. One more and I can call it in.',
-    'That should do it.',
+    'Three. Two more.',
+    'Four. One more and I can call it in.',
+    'That\'s five. That should do it.',
     'More proof. Good.',
-    'Every single one of these is impossible.',
   ];
   function onPhoto(ev) {
     $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
