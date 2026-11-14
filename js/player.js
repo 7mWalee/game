@@ -98,7 +98,7 @@
       if (e.button === 2) self.cameraUp = true;
       if (e.button === 0) {
         if (self.cameraUp) self.takePhoto();
-        else self.hint && self.hint('Raise your camera first — hold RIGHT MOUSE or press Q');
+        else self.hint && self.hint('Raise your camera first — hold RIGHT MOUSE or press Q' + (LO.isTouch ? ' (tap CAMERA)' : ''));
       }
     });
     document.addEventListener('mouseup', e => { if (e.button === 2) self.cameraUp = false; });
@@ -141,13 +141,17 @@
       // ---------- movement ----------
       const wantCrouch = k.KeyC || k.ControlLeft || k.ControlRight;
       this.crouch += ((wantCrouch ? 1 : 0) - this.crouch) * Math.min(1, dt * 10);
-      const fwd = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
-      const str = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
+      let fwd = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
+      let str = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
+      // analog touch joystick
+      const tm = this.touchMove;
+      let analog = 1;
+      if (tm && Math.hypot(tm.x, tm.y) > 0.15) { fwd = -tm.y; str = tm.x; analog = Math.min(1, Math.hypot(tm.x, tm.y)); }
       moving = fwd !== 0 || str !== 0;
-      const wantSprint = (k.ShiftLeft || k.ShiftRight) && moving && fwd > 0 && !wantCrouch && !this.cameraUp;
+      const wantSprint = (k.ShiftLeft || k.ShiftRight) && moving && fwd > 0.3 && !wantCrouch && !this.cameraUp;
       if (this.exhausted && this.stamina > 35) this.exhausted = false;
       sprinting = wantSprint && !this.exhausted && this.stamina > 0;
-      let speed = wantCrouch ? 1.6 : sprinting ? 6.9 : 3.3;
+      let speed = (wantCrouch ? 1.6 : sprinting ? 6.9 : 3.3) * (sprinting ? 1 : Math.max(0.5, analog));
       if (this.cameraUp) speed *= 0.6;
       const sinY = Math.sin(this.yaw), cosY = Math.cos(this.yaw);
       let mx = -sinY * fwd + cosY * str, mz = -cosY * fwd - sinY * str;

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>The Loud One</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Special+Elite&display=swap" rel="stylesheet">
@@ -96,7 +96,7 @@
   <div class="letterbox top"></div>
   <div class="letterbox bottom"></div>
   <div id="cut-caption"></div>
-  <div class="skip-hint">Hold SPACE to skip</div>
+  <div class="skip-hint">Hold SPACE (or touch the screen) to skip</div>
   <div id="skip-bar"><div></div></div>
 </div>
 
@@ -134,6 +134,21 @@
     </div>
   </div>
   <div id="minimap-hint"></div>
+  <!-- Touch controls (shown on phones / tablets) -->
+  <div id="touch">
+    <div id="t-look"></div>
+    <div id="t-stick"><div id="t-knob"></div></div>
+    <button class="t-btn" id="t-pause" data-t="pause" aria-label="Pause">II</button>
+    <div id="t-buttons">
+      <button class="t-btn big" id="t-shutter" data-t="shutter">SNAP</button>
+      <button class="t-btn" data-t="camera" id="t-camera">CAMERA</button>
+      <button class="t-btn" data-t="use" id="t-use">HIDE</button>
+      <button class="t-btn" data-t="light" id="t-light">LIGHT</button>
+      <button class="t-btn" data-t="crouch" id="t-crouch">CROUCH</button>
+      <button class="t-btn" data-t="jump">JUMP</button>
+      <button class="t-btn" data-t="sprint" id="t-sprint">SPRINT</button>
+    </div>
+  </div>
 </div>
 
 <!-- Camera viewfinder -->
@@ -216,5 +231,6 @@
 <script src="js/player.js"></script>
 <script src="js/cutscenes.js"></script>
 <script src="js/main.js"></script>
+<script src="js/touch.js"></script>
 </body>
 </html>

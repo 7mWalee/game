@@ -94,3 +94,7 @@ window.LO = window.LO || {};
   LO.settings = S;
   LO.Settings = { set, save, PRESETS, DEFAULTS, GRAPHICS_OPTIONS, AUDIO_OPTIONS };
 })();
+
+// touch device detection (phones / tablets)
+LO.isTouch = ('ontouchstart' in window || navigator.maxTouchPoints > 0) &&
+  (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : true);

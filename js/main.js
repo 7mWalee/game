@@ -309,14 +309,15 @@
     lockPointer();
     setTimeout(() => {
       if (state !== 'play') return;
-      showHint(`Photograph ${EVIDENCE_NEEDED} pieces of evidence. Raise your camera with RIGHT MOUSE or Q.`, 7000);
+      showHint(`Photograph ${EVIDENCE_NEEDED} pieces of evidence. Raise your camera with ${LO.isTouch ? 'the CAMERA button' : 'RIGHT MOUSE or Q'}.`, 7000);
       A.say('player', 'Okay. Evidence. Footprints, wreckage, anything that proves that thing was here.');
     }, 1800);
-    setTimeout(() => state === 'play' && hintOnce('flash', 'F toggles the flashlight. He can hear it buzz when he\'s close.', 6000), 10000);
+    setTimeout(() => state === 'play' && hintOnce('flash', (LO.isTouch ? 'The LIGHT button' : 'F') + ' toggles the flashlight. He can hear it buzz when he\'s close.', 6000), 10000);
     setTimeout(() => state === 'play' && hintOnce('meter', 'The white marker on the NOISE bar is how close he is. If your noise passes it, he hears you.', 8000), 18000);
   }
 
   function lockPointer() {
+    if (LO.isTouch) return;
     const el = renderer.domElement;
     try {
       const p = el.requestPointerLock && el.requestPointerLock();
@@ -324,6 +325,7 @@
     } catch (e) { /* user gesture needed */ }
   }
 
+  LO.pauseGame = () => pause();
   document.addEventListener('pointerlockchange', () => {
     if (!document.pointerLockElement && state === 'play') pause();
   });
@@ -550,7 +552,7 @@
       world.update(dt, gameTime);
     } else if (cutscene) {
       // hold space to skip
-      if (player.keys.Space && state === 'opening') {
+      if ((player.keys.Space || LO.touchHold) && state === 'opening') {
         skipHeld += dt;
         $('skip-bar').firstChild.style.width = Math.min(100, skipHeld / 1.2 * 100) + '%';
         if (skipHeld > 1.2) { A.stopVoices(); cutscene.finish(); }
