@@ -294,6 +294,60 @@
     wind.g.gain.setTargetAtTime(vol, ctx.currentTime, 1.0);
   };
 
+  // ---------- THE TENANT (hiding spot lurker) ----------
+  let tenant = null;
+  A.setTenant = function (amount) {
+    if (!ctx) return;
+    if (!tenant) {
+      // whispering: band-passed noise with jittery amplitude
+      const n = noiseSrc(false, true);
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 3;
+      const amp = ctx.createGain(); amp.gain.value = 0;
+      const lfo = ctx.createOscillator(); lfo.type = 'sawtooth'; lfo.frequency.value = 7;
+      const lg = ctx.createGain(); lg.gain.value = 0.5;
+      lfo.connect(lg); lg.connect(amp.gain);
+      const g = ctx.createGain(); g.gain.value = 0;
+      n.connect(f); f.connect(amp); amp.connect(g); g.connect(sfxBus);
+      // low breathing drone
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 44;
+      const of = ctx.createBiquadFilter(); of.type = 'lowpass'; of.frequency.value = 160;
+      const og = ctx.createGain(); og.gain.value = 0;
+      o.connect(of); of.connect(og); og.connect(sfxBus);
+      n.start(); lfo.start(); o.start();
+      tenant = { g, og, f, lfo };
+    }
+    const t = ctx.currentTime;
+    const a = Math.max(0, amount);
+    tenant.g.gain.setTargetAtTime(a * a * 0.5, t, 0.2);
+    tenant.og.gain.setTargetAtTime(a * a * 0.35, t, 0.3);
+    tenant.lfo.frequency.setTargetAtTime(5 + a * 9 + Math.random() * 3, t, 0.1);
+    tenant.f.frequency.setTargetAtTime(1600 + Math.random() * 1600, t, 0.08);
+  };
+  A.tenantScream = function () {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    A.boom(0.8);
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(1400, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.9);
+    const d = distortion(5);
+    const g = ctx.createGain(); env(g, t, 0.005, 0.7, 0.9, 0.0001);
+    o.connect(d); d.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 1);
+    const n = noiseSrc(false, false);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3000; f.Q.value = 1;
+    const g2 = ctx.createGain(); env(g2, t, 0.005, 0.6, 0.6, 0.0001);
+    n.connect(f); f.connect(g2); g2.connect(sfxBus); n.start(t); n.stop(t + 0.7);
+  };
+  A.knock = function () {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    [0, 0.18, 0.32].forEach(dt => {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(180, t + dt); o.frequency.exponentialRampToValueAtTime(70, t + dt + 0.08);
+      const g = ctx.createGain(); env(g, t + dt, 0.002, 0.5, 0.1, 0.0001);
+      o.connect(g); g.connect(sfxBus); o.start(t + dt); o.stop(t + dt + 0.15);
+    });
+  };
+
   // ---------- SIREN HEAD sounds ----------
   // A persistent positional voice for the monster
   A.createMonsterVoice = function () {

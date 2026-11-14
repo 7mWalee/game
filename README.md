@@ -10,6 +10,7 @@ Open `index.html` in a modern browser (Chrome, Edge or Firefox). You don't need 
 - **Siren Head is blind and hunts by sound.** Walking, running, jumping, panting, your camera shutter and the buzz of your flashlight can all give you away.
 - If he hears you, he comes to investigate. Keep making noise and he gets **angry**. If he's angry and you're making noise when he reaches you, he gets you.
 - **Silence keeps you safe.** Stand still with the light off, or hide in a dumpster or locker. He can't catch you while you're completely silent.
+- **Don't hide too long.** Something called **the Tenant** lives in the hiding spots. After about 14 seconds it throws you out with a loud crash Siren Head can hear, then keeps that spot for a while.
 - The white marker on the **NOISE** bar shows how close he is. If your noise goes past the marker, he can hear you.
 
 | Key | Action |

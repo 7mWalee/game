@@ -83,6 +83,7 @@
       <tr><td>Right mouse / Q</td><td>Raise camera</td></tr>
       <tr><td>Left mouse</td><td>Take photo (while camera raised)</td></tr>
       <tr><td>E</td><td>Hide / interact / pick up</td></tr>
+      <tr><td colspan="2" style="color:#d6cfc0">Don't hide too long — <b>the Tenant</b> lives in the hiding spots and will throw you out (loudly).</td></tr>
       <tr><td>H</td><td>Hint (unlocks after 3 minutes without finding evidence)</td></tr>
       <tr><td>Esc</td><td>Pause</td></tr>
     </table>
@@ -165,6 +166,16 @@
   <div class="vf-film" id="vf-film">FILM ∞</div>
 </div>
 <div id="flash"></div>
+<div id="tenant-face">
+  <svg viewBox="0 0 200 260" aria-hidden="true">
+    <defs><radialGradient id="tf" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#d9d4c8"/><stop offset="1" stop-color="#5a544c"/></radialGradient></defs>
+    <path d="M100 8 C40 8 18 70 22 130 C26 200 62 252 100 252 C138 252 174 200 178 130 C182 70 160 8 100 8Z" fill="url(#tf)"/>
+    <ellipse cx="66" cy="112" rx="24" ry="32" fill="#000"/><ellipse cx="134" cy="112" rx="24" ry="32" fill="#000"/>
+    <circle cx="70" cy="116" r="4" fill="#fff"/><circle cx="130" cy="116" r="4" fill="#fff"/>
+    <path d="M52 178 Q100 250 148 178 Q100 210 52 178Z" fill="#000"/>
+    <path d="M60 184 L66 196 L72 186 L80 200 L88 188 L96 204 L104 188 L112 204 L120 188 L128 200 L136 186 L142 194" stroke="#cfc8b8" stroke-width="3" fill="none"/>
+  </svg>
+</div>
 
 <!-- Photo result popup -->
 <div id="photo-pop">
@@ -177,7 +188,9 @@
 <!-- Hiding overlay -->
 <div id="hide-overlay" class="screen">
   <div class="slats"></div>
-  <div class="hide-text">HIDING — press E to leave</div>
+  <div id="tenant-eyes"><span></span><span></span></div>
+  <div class="hide-text" id="hide-text">HIDING — press E to leave</div>
+  <div id="tenant-bar"><div></div></div>
 </div>
 
 <!-- Pause -->

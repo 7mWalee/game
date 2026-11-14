@@ -363,3 +363,17 @@ body.touch #subtitles { bottom: 30vh; }
 #hint-label { font-size: 14px; color: #ffd34d; letter-spacing: 1px; margin-top: 4px; }
 body.touch #hint-btn { display: none; }
 body.touch #t-hint { grid-column: span 2; }
+
+/* ---------- the Tenant ---------- */
+#tenant-eyes { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); opacity: 0; display: flex; gap: 46px; transition: opacity 0.4s; }
+#tenant-eyes span { width: 26px; height: 12px; border-radius: 50%; background: radial-gradient(ellipse, #fff 0 25%, #d9d2b0 45%, rgba(200,190,150,0) 75%); box-shadow: 0 0 18px rgba(255,250,220,0.5); animation: tenantBlink 4s infinite; }
+@keyframes tenantBlink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+#tenant-bar { position: absolute; bottom: calc(10% - 18px); left: 50%; transform: translateX(-50%); width: 180px; height: 3px; background: rgba(255,255,255,0.12); }
+#tenant-bar div { height: 100%; width: 0; background: #c33; }
+#hide-overlay.restless .slats { animation: shakeSlats 0.12s infinite; }
+#hide-overlay.restless .hide-text { color: #f44; }
+@keyframes shakeSlats { 0% { transform: translate(0,0); } 50% { transform: translate(3px,-2px); } 100% { transform: translate(-2px,2px); } }
+#tenant-face { position: fixed; inset: 0; z-index: 46; pointer-events: none; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse, rgba(0,0,0,0.4), #000 80%); }
+#tenant-face svg { width: min(70vw, 70vh); height: auto; }
+#tenant-face.go { display: flex; animation: tenantJump 0.75s ease-out forwards; }
+@keyframes tenantJump { 0% { opacity: 1; transform: scale(0.6); } 15% { transform: scale(1.15); } 70% { opacity: 1; transform: scale(1.2) translate(4px,-3px); } 100% { opacity: 0; transform: scale(1.3); } }

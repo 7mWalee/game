@@ -184,34 +184,51 @@
     this.distToPlayer = dist;
 
     // ---------- HEARING ----------
+    // he hears a little further than the raw noise radius
+    const HEAR = 1.3;
     let heard = false, strength = 0;
-    if (!player.hidden && player.noiseRadius > 0 && dist < player.noiseRadius) {
+    const radius = player.noiseRadius * HEAR;
+    if (!player.hidden && radius > 0 && dist < radius) {
       heard = true;
-      strength = 1 - dist / player.noiseRadius;
+      strength = 1 - dist / radius;
     }
     this.heardNow = heard;
     if (heard) {
-      const err = Math.min(10, dist * 0.12);
-      this.lastHeard.set(player.pos.x + (Math.random() - 0.5) * err, 0, player.pos.z + (Math.random() - 0.5) * err);
+      const err = Math.min(6, dist * 0.07);
+      // while hunting he leads his target, aiming where you are running to
+      const lead = this.state === 'hunt' ? 1.2 : 0.4;
+      this.lastHeard.set(
+        player.pos.x + player.vel.x * lead + (Math.random() - 0.5) * err, 0,
+        player.pos.z + player.vel.z * lead + (Math.random() - 0.5) * err);
       this.lastHeardTime = time;
-      const rate = (14 + 85 * strength) * (this.state === 'hunt' ? 1.4 : 1);
+      this.stalkTimer = 0;
+      const rate = (26 + 115 * strength) * (this.state === 'hunt' ? 1.5 : this.state === 'search' ? 1.3 : 1);
       this.anger = Math.min(100, this.anger + rate * dt);
     } else {
-      const decay = this.state === 'hunt' ? 5 : this.state === 'search' ? 9 : 6;
-      if (time - this.lastHeardTime > 1.5) this.anger = Math.max(0, this.anger - decay * dt);
+      const decay = this.state === 'hunt' ? 3 : this.state === 'search' ? 5 : 5;
+      if (time - this.lastHeardTime > 2.5) this.anger = Math.max(0, this.anger - decay * dt);
     }
     const sinceHeard = time - this.lastHeardTime;
+    this.stalkTimer = (this.stalkTimer || 0) + dt;
 
     // ---------- STATE MACHINE ----------
     switch (this.state) {
       case 'wander':
-        this.speed = 2.3;
+        this.speed = 3.1;
         if (heard) { this.setState('investigate'); this.say('heard', dist); LO.audio.siren(this.voice, 'short', 0.8); break; }
+        // he "senses" the living: every so often he heads straight for your area
+        if (this.stalkTimer > 40) {
+          this.stalkTimer = 0;
+          const a = Math.random() * Math.PI * 2, r = 10 + Math.random() * 18;
+          const p = W.projectToStreet({ x: player.pos.x + Math.cos(a) * r, z: player.pos.z + Math.sin(a) * r });
+          this.path = W.path(this.pos, p).map(n => new V3(n.x, 0, n.z));
+          this.path.push(new V3(p.x, 0, p.z));
+          break;
+        }
         if (!this.path.length) {
-          // wander to a random node, biased slightly toward the player (he is drawn to the living)
           const nodes = W.nodes;
           let n = nodes[(Math.random() * nodes.length) | 0];
-          if (Math.random() < 0.45) {
+          if (Math.random() < 0.7) {
             const near = W.nearestNode(player.pos);
             const i = Math.max(0, Math.min(4, near.i + ((Math.random() * 3) | 0) - 1));
             const j = Math.max(0, Math.min(4, near.j + ((Math.random() * 3) | 0) - 1));
@@ -221,36 +238,43 @@
         }
         break;
       case 'investigate':
-        this.speed = 3.8;
+        this.speed = 5.0;
         if (this.anger >= 100) { this.startHunt(dist); break; }
         this.goTo(this.lastHeard, dt);
         if (this.reached && sinceHeard > 2.5) this.setState('search');
-        if (sinceHeard > 14) this.setState('search');
+        if (sinceHeard > 18) this.setState('search');
         break;
       case 'hunt':
-        this.speed = 6.3;
+        this.speed = 7.4; // faster than you can sprint
         this.goTo(this.lastHeard, dt);
-        if (sinceHeard > 6 && this.anger < 70 && this.stateTime > 4) {
+        if (sinceHeard > 9 && this.anger < 60 && this.stateTime > 6) {
           this.setState('search');
           LO.audio.siren(this.voice, 'short', 0.7);
           this.hunting = false;
         }
         // CATCH — only possible while he is angry AND you are making noise
-        if (dist < 5.5 && player.noiseRadius > 0 && !player.hidden && this.stateTime > 0.6) {
+        if (dist < 7 && player.noiseRadius > 0 && !player.hidden && this.stateTime > 0.6) {
           this.onCatch && this.onCatch();
           return;
         }
         break;
       case 'search':
-        this.speed = 0;
-        this.speedNow = 0;
-        this.path = [];
+        // sweeps the area around the last sound instead of standing still
+        this.speed = 2.6;
         if (heard) {
           if (this.anger >= 100) this.startHunt(dist);
           else { this.setState('investigate'); if (Math.random() < 0.5) this.say('heard', dist); }
           break;
         }
-        if (this.stateTime > 9 + Math.random() * 0.02) { this.setState('wander'); this.hunting = false; }
+        this.searchPause = (this.searchPause || 0) - dt;
+        if (!this.path.length && this.searchPause <= 0) {
+          const a = Math.random() * Math.PI * 2, r = 4 + Math.random() * 14;
+          const p = W.projectToStreet({ x: this.lastHeard.x + Math.cos(a) * r, z: this.lastHeard.z + Math.sin(a) * r });
+          this.path = [new V3(p.x, 0, p.z)];
+          this.searchPause = 2 + Math.random() * 2;
+        }
+        if (this.path.length) this.followPath(dt); else this.speedNow = 0;
+        if (this.stateTime > 18) { this.setState('wander'); this.hunting = false; }
         break;
     }
 

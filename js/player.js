@@ -9,8 +9,10 @@
   // noise radii in metres: how far away Siren Head can hear each thing
   const NOISE = {
     flashlight: 9, crouch: 4, walk: 16, sprint: 46, panting: 6,
-    jump: 30, land: 36, shutter: 14, hide: 5,
+    jump: 30, land: 36, shutter: 14, hide: 5, kicked: 42,
   };
+  const TENANT_LIMIT = 14;   // seconds you can hide before the Tenant loses patience
+  LO.TENANT_LIMIT = TENANT_LIMIT;
   LO.NOISE = NOISE;
 
   function Player(camera, world, scene) {
@@ -61,6 +63,7 @@
     this.flashOn = false;
     this.cameraUp = false;
     this.hidden = null;
+    this.hideTime = 0;
     this.spike = 0;
     this.noiseRadius = 0;
     this.stepPhase = 0;
@@ -128,16 +131,21 @@
       const sp = this.hidden;
       this.pos.set(sp.pos.x, 0, sp.pos.z);
       this.vel.set(0, 0, 0);
-      let d = this.yaw - sp.yaw;
+      let d = this.yaw - (sp.yaw + Math.PI);
       while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
       d = Math.max(-0.9, Math.min(0.9, d));
-      this.yaw = sp.yaw + d;
+      this.yaw = sp.yaw + Math.PI + d;
       this.pitch = Math.max(-0.5, Math.min(0.4, this.pitch));
       this.flashOn = false;
       this.cameraUp = false;
       this.stamina = Math.min(100, this.stamina + 18 * dt);
+      // THE TENANT: something already lives in every hiding spot.
+      // Stay too long and it throws you out.
+      this.hideTime += dt;
+      if (this.hideTime >= TENANT_LIMIT) { this.kickOut(); }
       this.panting = Math.max(0, this.panting - dt * 0.5);
     } else {
+      this.hideTime = Math.max(0, this.hideTime - dt * 0.5);
       // ---------- movement ----------
       const wantCrouch = k.KeyC || k.ControlLeft || k.ControlRight;
       this.crouch += ((wantCrouch ? 1 : 0) - this.crouch) * Math.min(1, dt * 10);
@@ -243,7 +251,7 @@
     if (this.hidden) this.prompt = '<kbd>E</kbd>Leave hiding spot';
     else {
       const sp = this.nearestHideSpot();
-      if (sp) this.prompt = `<kbd>E</kbd>Hide in ${sp.type}`;
+      if (sp) this.prompt = sp.lockedUntil > performance.now() / 1000 ? 'Something is moving inside...' : `<kbd>E</kbd>Hide in ${sp.type}`;
     }
 
     // ---------- camera zoom & viewfinder ----------
@@ -295,6 +303,24 @@
     }
   };
 
+  Player.prototype.kickOut = function () {
+    const s = this.hidden;
+    if (!s) return;
+    this.hidden = null;
+    s.lockedUntil = performance.now() / 1000 + 45;   // it keeps that spot for a while
+    this.pos.copy(s.exit);
+    this.yaw = s.yaw + Math.PI;
+    this.pitch = 0.1;
+    // shoved out hard — and it is LOUD
+    const dir = new V3(s.exit.x - s.pos.x, 0, s.exit.z - s.pos.z).normalize();
+    this.vel.set(dir.x * 7, 3, dir.z * 7);
+    this.onGround = false;
+    this.spike = Math.max(this.spike, NOISE.kicked);
+    this.shake = Math.max(this.shake, 0.9);
+    this.hideTime = TENANT_LIMIT * 0.6;              // still restless if you dive straight back in
+    this.onKicked && this.onKicked();
+  };
+
   Player.prototype.nearestHideSpot = function () {
     let best = null, bd = 1.7;
     const fwd = new V3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
@@ -313,15 +339,20 @@
       const s = this.hidden;
       this.hidden = null;
       this.pos.copy(s.exit);
-      this.yaw = s.yaw;
+      this.yaw = s.yaw + Math.PI;
       LO.audio.hideDoor();
       this.spike = Math.max(this.spike, NOISE.hide);
       return;
     }
     const s = this.nearestHideSpot();
+    if (s && s.lockedUntil && s.lockedUntil > performance.now() / 1000) {
+      LO.audio.knock && LO.audio.knock();
+      this.hint && this.hint('Something is still in there. It won\'t let you in.');
+      return;
+    }
     if (s) {
       this.hidden = s;
-      this.yaw = s.yaw; this.pitch = 0;
+      this.yaw = s.yaw + Math.PI; this.pitch = 0;
       this.flashOn = false;
       LO.audio.hideDoor();
       this.onHide && this.onHide();

@@ -111,7 +111,13 @@
     player = new LO.Player(camera, world, scene);
     player.hint = showHint;
     player.onPhoto = onPhoto;
-    player.onHide = () => hintOnce('hide', 'Hidden. You make no sound in here. Press E to leave.');
+    player.onHide = () => hintOnce('hide', 'Hidden. You make no sound in here — but don\'t stay long. Something else lives in here.');
+    player.onKicked = () => {
+      A.tenantScream();
+      const f = $('tenant-face');
+      f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+      showHint('THE TENANT threw you out! That was loud — he may have heard it. Never hide too long.', 6000);
+    };
     siren.onCatch = onCaught;
     siren.onStep = p => {
       if (state !== 'play') return;
@@ -271,7 +277,7 @@
     if (document.pointerLockElement) document.exitPointerLock();
     player.enabled = false;
     player.flashOn = false;
-    A.setFlashlightBuzz(false); A.setBreathing(0); A.setHeartbeat(0);
+    A.setFlashlightBuzz(false); A.setBreathing(0); A.setHeartbeat(0); A.setTenant(0);
     if (worldDirty || state === 'ending' || state === 'credits' || state === 'dead') buildWorld();
     setupTitleScene();
     state = 'title';
@@ -383,7 +389,7 @@
     player.enabled = false;
     show('pause');
     if (window.speechSynthesis) try { speechSynthesis.pause(); } catch (e) {}
-    A.setFlashlightBuzz(false); A.setBreathing(0);
+    A.setFlashlightBuzz(false); A.setBreathing(0); A.setTenant(0);
   }
   function resume() {
     hideAllScreens();
@@ -546,6 +552,17 @@
     $('prompt').innerHTML = player.prompt;
     $('crosshair').style.display = player.cameraUp ? 'none' : 'block';
     show('hide-overlay', !!player.hidden);
+    // the Tenant grows restless the longer you hide
+    const tf = Math.min(1, player.hideTime / LO.TENANT_LIMIT);
+    if (player.hidden) {
+      const eyes = Math.max(0, (tf - 0.35) / 0.65);
+      $('tenant-eyes').style.opacity = eyes;
+      $('tenant-eyes').style.transform = `translate(-50%, -50%) scale(${0.6 + eyes * 0.9})`;
+      $('tenant-bar').firstChild.style.width = (tf * 100) + '%';
+      $('hide-text').textContent = tf < 0.4 ? 'HIDING — press E to leave' : tf < 0.75 ? 'You are not alone in here...' : 'GET OUT. GET OUT. GET OUT.';
+      $('hide-overlay').classList.toggle('restless', tf >= 0.75);
+      A.setTenant(Math.max(0, (tf - 0.3) / 0.7));
+    } else A.setTenant(0);
     show('viewfinder', player.zoom > 0.5);
     if (player.zoom > 0.5) {
       const vf = player.vfTarget;
