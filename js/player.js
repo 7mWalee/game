@@ -129,8 +129,23 @@
     document.addEventListener('contextmenu', e => e.preventDefault());
   };
 
+  // inside a hiding spot the flashlight is a last resort against the Tenant:
+  // one blinding burst drives it off, but it drains 95% of the battery
+  const TENANT_BANISH_COST = 95;
+  Player.prototype.blindTenant = function () {
+    if (this.battery < TENANT_BANISH_COST) {
+      LO.audio.click(false);
+      this.hint && this.hint(`Not enough battery (needs ${TENANT_BANISH_COST}%).`);
+      return;
+    }
+    this.battery -= TENANT_BANISH_COST;
+    this.hideTime = 0;
+    this.tenantTick = 0;
+    this.burst.intensity = 18;
+    this.onTenantBlinded && this.onTenantBlinded();
+  };
   Player.prototype.toggleFlash = function () {
-    if (this.hidden) return;
+    if (this.hidden) { this.blindTenant(); return; }
     if (!this.flashOn && this.battery <= 0) { LO.audio.click(false); this.hint && this.hint('The flashlight is dead. Find batteries.'); return; }
     this.flashOn = !this.flashOn;
     LO.audio.click(this.flashOn);

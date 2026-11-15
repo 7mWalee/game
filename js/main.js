@@ -138,6 +138,10 @@
       player.shake = Math.max(player.shake, 0.5);
     };
     player = new LO.Player(camera, world, scene);
+    player.onTenantBlinded = () => {
+      const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+      A.click(true); A.staticBurst(null, 0.6, 0.45); A.setTenant(0);
+    };
     player.hint = showHint;
     player.onPhoto = onPhoto;
     player.onDamage = (amount, cause) => {

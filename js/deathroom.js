@@ -17,7 +17,7 @@
     ] },
     tenant: { name: 'THE TENANT', label: 'PHENOMENON-225', tips: [
       'Appears as a single red eye',
-      'Lurks in hiding spots',
+      'He loves the darkness',
       'Creeps closer the longer you hide',
       "Don't overstay your welcome",
     ] },
