@@ -246,43 +246,97 @@
     // =========================================================
     //  PROPS
     // =========================================================
+    // ---------- cars: a boxy 80s sedan (front = +z) ----------
+    let KIT = null;
+    function carKit() {
+      if (KIT) return KIT;
+      const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+      KIT = {
+        body: B(1.9, 0.5, 4.4), hood: B(1.86, 0.1, 1.35), trunk: B(1.86, 0.1, 0.95), roof: B(1.56, 0.07, 1.62),
+        pillar: B(0.09, 1, 0.09), wind: B(1.5, 1, 0.025), side: B(0.025, 0.42, 1.72),
+        bumper: B(2.02, 0.16, 0.22), tail: B(0.58, 0.2, 0.04), tailRim: B(0.66, 0.26, 0.03), plate: B(0.5, 0.16, 0.03),
+        grille: B(1.0, 0.2, 0.04), head: B(0.34, 0.17, 0.04), trim: B(0.02, 0.05, 3.6), mirror: B(0.14, 0.1, 0.08),
+        door: B(0.025, 0.4, 1.8), tire: new THREE.CylinderGeometry(0.36, 0.36, 0.24, 14), rim: new THREE.CylinderGeometry(0.21, 0.21, 0.26, 10),
+        chrome: mat({ color: 0xa8a8a8, roughness: 0.35, metalness: 0.8 }),
+        tailOn: new THREE.MeshBasicMaterial({ color: 0xd01212 }), tailOff: mat({ color: 0x6a0c0c, roughness: 0.4 }),
+        tailRimMat: mat({ color: 0xd9b0b0, roughness: 0.5 }),
+        plateMat: mat({ color: 0xe8e2d2, roughness: 0.7 }),
+        headOn: new THREE.MeshBasicMaterial({ color: 0xfff2cc }), headOff: mat({ color: 0x4a4a40, roughness: 0.3 }),
+        white: mat({ color: 0xdedede }),
+      };
+      return KIT;
+    }
+    // a thin box stretched between two points (pillars, glass)
+    function strut(geo, material, a, b, parent) {
+      const m = new THREE.Mesh(geo, material);
+      const d = new THREE.Vector3().subVectors(b, a);
+      m.position.copy(a).addScaledVector(d, 0.5);
+      m.scale.y = d.length();
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+      parent.add(m);
+      return m;
+    }
     function car(x, z, ry, opts) {
       opts = opts || {};
+      const K = carKit(), V = THREE.Vector3;
       const g = new THREE.Group();
       const paint = opts.police ? mat({ color: 0x111111, roughness: 0.5, metalness: 0.3 }) : (opts.paint || pick(M.carPaints));
-      const crushed = opts.crushed ? 0.45 : 1;
-      const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7 * crushed, 4.4), paint);
-      body.position.y = 0.55 * crushed + 0.15; g.add(body);
-      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65 * crushed * (opts.crushed ? 0.4 : 1), 2.2), M.glass);
-      cab.position.set(0, 1.2 * crushed + 0.1, -0.2); g.add(cab);
+      const add = (geo, m, px, py, pz, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(px, py, pz); (parent || g).add(o); return o; };
+      // lower body, hood and trunk
+      const body = add(K.body, paint, 0, 0.58, 0);
+      const hood = add(K.hood, paint, 0, 0.86, 1.52); hood.rotation.x = 0.05;
+      add(K.trunk, paint, 0, 0.88, -1.72);
+      // cabin: roof on pillars, with glass between them
+      const cab = new THREE.Group(); cab.position.y = 0.88; g.add(cab);
+      add(K.roof, paint, 0, 0.55, -0.32, cab);
+      [-1, 1].forEach(sd => {
+        strut(K.pillar, paint, new V(sd * 0.8, 0, 0.86), new V(sd * 0.76, 0.54, 0.47), cab);    // A
+        strut(K.pillar, paint, new V(sd * 0.79, 0, -0.3), new V(sd * 0.77, 0.54, -0.3), cab);   // B
+        strut(K.pillar, paint, new V(sd * 0.8, 0, -1.3), new V(sd * 0.76, 0.54, -1.1), cab);    // C
+        add(K.side, M.glass, sd * 0.785, 0.28, -0.4, cab);
+        const mr = add(K.mirror, paint, sd * 1.0, 0.12, 0.72, cab); void mr;
+      });
+      const ws = strut(K.wind, M.glass, new V(0, 0, 0.85), new V(0, 0.54, 0.48), cab); void ws;
+      strut(K.wind, M.glass, new V(0, 0, -1.29), new V(0, 0.54, -1.11), cab);
+      // bumpers, lights, plate, grille, trim
+      add(K.bumper, K.chrome, 0, 0.36, 2.24); add(K.bumper, K.chrome, 0, 0.36, -2.24);
+      [-1, 1].forEach(sd => {
+        add(K.tailRim, K.tailRimMat, sd * 0.6, 0.68, -2.205);
+        add(K.tail, opts.headlightsOn ? K.tailOn : K.tailOff, sd * 0.6, 0.68, -2.215);
+        add(K.head, opts.headlightsOn ? K.headOn : K.headOff, sd * 0.68, 0.66, 2.215);
+        add(K.trim, K.chrome, sd * 0.955, 0.72, 0);
+        if (opts.police) add(K.door, K.white, sd * 0.958, 0.6, -0.2);
+      });
+      add(K.plate, K.plateMat, 0, 0.6, -2.22);
+      add(K.grille, M.dark, 0, 0.66, 2.215);
+      // wheels with rims
+      [[-0.86, 1.38], [0.86, 1.38], [-0.86, -1.38], [0.86, -1.38]].forEach(([wx, wz], i) => {
+        const w = new THREE.Group(); w.position.set(wx * (opts.crushed ? 1.15 : 1), 0.36, wz); g.add(w);
+        const t = new THREE.Mesh(K.tire, M.tire); t.rotation.z = Math.PI / 2; w.add(t);
+        const r = new THREE.Mesh(K.rim, K.chrome); r.rotation.z = Math.PI / 2; w.add(r);
+        if (opts.crushed && i % 2) w.rotation.z = 0.5;
+      });
       if (opts.police) {
-        const doors = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.4 * crushed, 2.0), mat({ color: 0xdddddd }));
-        doors.position.set(0, 0.6 * crushed + 0.15, 0); g.add(doors);
         const bar = new THREE.Group();
         const red = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.15, 0.3), new THREE.MeshBasicMaterial({ color: opts.lightsOn ? 0xff2020 : 0x501010 }));
         const blue = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.15, 0.3), new THREE.MeshBasicMaterial({ color: opts.lightsOn ? 0x2050ff : 0x101850 }));
         red.position.x = -0.35; blue.position.x = 0.35; bar.add(red, blue);
-        bar.position.set(0, (opts.crushed ? 0.75 : 1.6), -0.2);
-        if (opts.crushed) bar.rotation.z = 0.5;
-        g.add(bar); g.userData.red = red; g.userData.blue = blue;
+        bar.position.set(0, 0.67, -0.3);
+        cab.add(bar); g.userData.red = red; g.userData.blue = blue;
       }
-      const wg = new THREE.CylinderGeometry(0.38, 0.38, 0.3, 12);
-      [[-0.95, 1.4], [0.95, 1.4], [-0.95, -1.4], [0.95, -1.4]].forEach(([wx, wz], i) => {
-        const w = new THREE.Mesh(wg, M.tire); w.rotation.z = Math.PI / 2;
-        w.position.set(wx * (opts.crushed ? 1.2 : 1), 0.38, wz);
-        if (opts.crushed && i % 2) w.rotation.x = 0.6;
-        g.add(w);
-      });
-      // headlights
-      const hl = new THREE.MeshBasicMaterial({ color: opts.headlightsOn ? 0xfff2cc : 0x333322 });
-      [-0.65, 0.65].forEach(hx => { const h = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.18, 0.05), hl); h.position.set(hx, 0.6 * crushed + 0.2, 2.21); g.add(h); });
+      if (opts.crushed) {
+        // something stepped on it
+        cab.scale.y = 0.3; cab.rotation.z = 0.12;
+        body.scale.y = 0.8; body.position.y = 0.5;
+        hood.rotation.x = 0.25; hood.position.y = 0.92;
+      }
       g.position.set(x, 0, z); g.rotation.y = ry || 0;
-      if (opts.flipped) { g.rotation.z = Math.PI; g.position.y = 1.5; }
+      if (opts.flipped) { g.rotation.z = Math.PI; g.position.y = 1.45; }
       g.traverse(o => { if (o.isMesh && shadows) { o.castShadow = true; o.receiveShadow = true; } });
       (opts.parent || W.root).add(g);
       if (!opts.noCollide) {
-        const c = Math.abs(Math.cos(ry || 0)), s = Math.abs(Math.sin(ry || 0));
-        const hw = (2 * c + 4.4 * s) / 2 + 0.1, hd = (2 * s + 4.4 * c) / 2 + 0.1;
+        const c = Math.abs(Math.cos(ry || 0)), s2 = Math.abs(Math.sin(ry || 0));
+        const hw = (2 * c + 4.5 * s2) / 2 + 0.1, hd = (2 * s2 + 4.5 * c) / 2 + 0.1;
         collider(x - hw, x + hw, z - hd, z + hd, 1.6);
         W.occluders.push(body);
       }
