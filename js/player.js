@@ -12,6 +12,7 @@
     jump: 30, land: 36, shutter: 14, hide: 5, kicked: 42,
   };
   const TENANT_LIMIT = 14;
+  const TENANT_HURT = 10;    // seconds of hiding before it starts to hurt you
   const TENANT_DAMAGE = 30;
   const MAX_ROCKS = 3;
   // THE EXPOSURE: appears in the viewfinder after 4s of camera use, lunges at 10s
@@ -161,15 +162,15 @@
       // THE TENANT: something already lives in every hiding spot.
       // Stay too long and it throws you out.
       if (!this.calm) this.hideTime += dt;
-      // once its eyes are open it hurts you every second, harder the closer it gets
-      const eyeK = (this.hideTime / TENANT_LIMIT - 0.25) / 0.75;
-      if (eyeK > 0 && !this.calm) {
+      // after ~10s of hiding it starts hurting you every second, harder the closer it gets
+      const eyeK = (this.hideTime - TENANT_HURT) / (TENANT_LIMIT - TENANT_HURT);
+      if (eyeK >= 0 && !this.calm) {
         this.tenantTick = (this.tenantTick || 0) - dt;
         if (this.tenantTick <= 0) {
           this.tenantTick = 1;
           this.damage(Math.round(2 + eyeK * 6), 'tenant');
         }
-      } else this.tenantTick = 1;
+      } else this.tenantTick = 0;   // first hit lands the moment it starts
       if (this.hideTime >= TENANT_LIMIT) { this.damage(9999, 'tenant'); }   // it reached you
       this.panting = Math.max(0, this.panting - dt * 0.5);
     } else {
