@@ -102,7 +102,11 @@
       this.root.lookAt(player.pos.x, 0, player.pos.z);
       this.root.visible = true;
       player.flickerForce = true;
+      // without the flashlight up you get an extra second to react
+      this.lightWasOff = !player.flashOn;
+      this.window = this.lightWasOff ? WINDOW + 1 : WINDOW;
       this.breath = LO.audio.sneakyBreath(this.root.position);
+      this.onAttack && this.onAttack(this.lightWasOff);
       return;
     }
     this.t += dt;
@@ -121,7 +125,7 @@
     const f2 = new V3(fwd.x, 0, fwd.z).normalize();
     toIt.normalize();
     if (f2.dot(toIt) > FACE_COS) { this.vanish(player, true); return; }
-    if (this.t >= WINDOW) { this.vanish(player, false); return 'kill'; }
+    if (this.t >= (this.window || WINDOW)) { this.vanish(player, false); return 'kill'; }
   };
 
   Sneaky.prototype.vanish = function (player, seen) {

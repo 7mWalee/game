@@ -125,6 +125,9 @@
     if (sneaky) scene && sneaky.root.parent && sneaky.root.parent.remove(sneaky.root);
     moths = new LO.Moths(scene, world);
     sneaky = new LO.Sneaky(scene, world);
+    sneaky.onAttack = lightOff => {
+      if (lightOff) showHint('Your equipment is flickering...', 3000);
+    };
     titleSpot = new THREE.SpotLight(0xfff1d6, 0, 90, 0.42, 0.5, 1.2);
     scene.add(titleSpot, titleSpot.target);
     moths.onShriek = pos => {
@@ -389,6 +392,7 @@
   }
 
   function goTitle() {
+    clearGlitch();
     A.silenceWorld(false);
     if (cutscene) endCutscene();
     LO.TVFX.clear();
@@ -435,6 +439,7 @@
   }
 
   function startGame(skipIntro) {
+    clearGlitch();
     LO.TVFX.clear();
     A.stopDeathMusic(); A.stopRinging(); clearTimeout(deathTimer);
     A.init();
@@ -640,7 +645,9 @@
     ] },
   };
   // death by damage (the Silent One / the Tenant)
+  function clearGlitch() { document.getElementById('game-root').style.filter = ''; $('viewfinder').style.opacity = ''; }
   function dieBy(cause) {
+    clearGlitch();
     if (state === 'play') A.silenceWorld(true);
     if (sneaky && cause !== 'sneaky' && sneaky.attacking) sneaky.vanish(player, false);
     if (state !== 'play') return;
@@ -657,6 +664,7 @@
     A.setMothFlutter(0);
   }
   function onCaught() {
+    clearGlitch();
     if (sneaky && sneaky.attacking) sneaky.vanish(player, false);
     if (state === 'play' && !siren.catchDisabled) A.silenceWorld(true);
     if (state !== 'play' || siren.catchDisabled) return;
@@ -821,6 +829,10 @@
       A.setSilentOne(0);
     }
     show('viewfinder', player.zoom > 0.5);
+    // the Sneaky One makes your camera glitch too
+    const glitch = sneaky && sneaky.attacking && player.zoom > 0.5;
+    $('viewfinder').style.opacity = glitch ? (Math.random() < 0.4 ? 0.15 : 1) : '';
+    document.getElementById('game-root').style.filter = glitch && Math.random() < 0.3 ? 'brightness(0.15) contrast(1.6)' : '';
     if (player.zoom > 0.5) {
       const vf = player.vfTarget;
       $('viewfinder').classList.toggle('locked', !!(vf && vf.ok));
