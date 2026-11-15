@@ -57,6 +57,7 @@
   };
 
   Sneaky.prototype.reset = function () {
+    lastReal = performance.now();
     this.timer = nextTime();
     this.attacking = false;
     this.t = 0;
@@ -65,8 +66,27 @@
   };
 
   // returns 'kill' when it gets you
+  // counts in real seconds (the game's own clock slows down on low frame rates)
+  let lastReal = performance.now();
+  function realDt() { const n = performance.now(), d = Math.min(0.5, (n - lastReal) / 1000); lastReal = n; return d; }
+  let label = null;
+  function testLabel(text) {
+    if (!TEST) return;
+    if (!label) {
+      label = document.createElement('div');
+      label.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:60;font:12px monospace;color:#ffd34d;background:rgba(0,0,0,0.6);padding:2px 8px;pointer-events:none';
+      document.body.appendChild(label);
+      // hide it whenever the game stops updating it (menus, cutscenes, death screen)
+      setInterval(() => { if (performance.now() - (label._t || 0) > 300) label.style.display = 'none'; }, 200);
+    }
+    label._t = performance.now();
+    label.style.display = text ? 'block' : 'none';
+    label.textContent = text;
+  }
   Sneaky.prototype.update = function (dt, player, camera, siren) {
-    if (player.calm || !player.alive) { if (this.attacking) this.vanish(player, false); return; }
+    dt = realDt();
+    if (player.calm || !player.alive) { if (this.attacking) this.vanish(player, false); testLabel(''); return; }
+    testLabel(this.attacking ? 'SNEAKY TEST: IT IS BEHIND YOU — TURN AROUND' : 'SNEAKY TEST: next attack in ' + Math.max(0, this.timer).toFixed(0) + 's');
     const fwd = new V3(); camera.getWorldDirection(fwd);
     if (!this.attacking) {
       // it won't come while Siren Head is close enough to hear the flashlight
