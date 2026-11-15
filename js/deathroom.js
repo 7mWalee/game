@@ -33,6 +33,12 @@
       'Shriek if your light rests on them too long',
       'Keep your beam moving, never stare',
     ] },
+    sneaky: { name: 'THE SNEAKY ONE', label: 'PHENOMENON-241', tips: [
+      'Two glowing eyes and a really wide smile',
+      'Creeps up right behind you when you least expect it',
+      'Your flashlight flickers and you hear breathing',
+      'Turn around before it gets you',
+    ] },
     exposure: { name: 'THE EXPOSURE', label: 'PHENOMENON-237', tips: [
       'A blurred figure only seen through a lens',
       "Lurks inside your camera's viewfinder",
@@ -120,6 +126,20 @@
       g.save(); g.setLineDash([6, 6]);
       pencil(g, [[w * 0.02, h * 0.95], [cx - 30, h * 0.3]], 1); pencil(g, [[w * 0.02, h * 0.95], [cx + 30, h * 0.5]], 1);
       g.restore();
+    },
+    sneaky(g, w, h) {
+      const cx = w / 2;
+      // the head: mostly darkness, two eyes and a grin far too wide
+      g.save(); g.fillStyle = 'rgba(30,30,30,0.85)'; g.beginPath(); g.ellipse(cx, h * 0.32, 120, 140, 0, 0, 7); g.fill(); g.restore();
+      g.save(); g.fillStyle = '#f4f0e0';
+      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(cx + d * 48, h * 0.25, 26, 12, 0, 0, 7); g.fill(); });
+      g.beginPath(); g.moveTo(cx - 105, h * 0.36); g.quadraticCurveTo(cx, h * 0.56, cx + 105, h * 0.36); g.quadraticCurveTo(cx, h * 0.47, cx - 105, h * 0.36); g.fill();
+      g.strokeStyle = '#333'; g.lineWidth = 2;
+      for (let i = 1; i < 12; i++) { const x = cx - 100 + i * 16.6; g.beginPath(); g.moveTo(x, h * 0.37 + Math.sin(i / 12 * Math.PI) * h * 0.06); g.lineTo(x, h * 0.41 + Math.sin(i / 12 * Math.PI) * h * 0.08); g.stroke(); }
+      g.restore();
+      // a little figure looking the wrong way
+      pencil(g, [[cx - 150, h * 0.9], [cx - 150, h * 0.7]], 3); ellipse(g, cx - 150, h * 0.66, 14, 16, 3);
+      g.save(); g.font = `30px ${HAND}`; g.fillStyle = '#333'; g.fillText('behind you', cx - 40, h * 0.86); g.restore();
     },
     exposure(g, w, h) {
       // a viewfinder with a blurred figure inside
@@ -214,6 +234,22 @@
         g.beginPath(); g.moveTo(mx, H * 0.38); g.lineTo(mx + 30, H * 0.3); g.lineTo(mx + 20, H * 0.55); g.fill();
       }
       caption(g, W, H, 'KEEP THE BEAM MOVING — NEVER STARE');
+    },
+    sneaky(g, W, H, T) {
+      g.fillStyle = '#121414'; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#1d2020'; g.fillRect(0, H * 0.74, W, H);
+      const turned = T > 3.2;
+      fig(g, W * 0.45, H * 0.74, 1);
+      // flickering torch beam ahead of the player
+      if (!turned && Math.random() > 0.3) { g.fillStyle = 'rgba(255,245,210,0.25)'; g.beginPath(); g.moveTo(W * 0.47, H * 0.6); g.lineTo(W, H * 0.45); g.lineTo(W, H * 0.75); g.fill(); }
+      // the eyes and grin behind them
+      const a = Math.min(1, T / 1.5) * (turned ? Math.max(0, 1 - (T - 3.2) * 3) : 1);
+      g.globalAlpha = a; g.fillStyle = '#f4f0dc';
+      g.beginPath(); g.ellipse(W * 0.27, H * 0.33, 5, 2.5, 0, 0, 7); g.fill();
+      g.beginPath(); g.ellipse(W * 0.33, H * 0.33, 5, 2.5, 0, 0, 7); g.fill();
+      g.beginPath(); g.moveTo(W * 0.24, H * 0.39); g.quadraticCurveTo(W * 0.3, H * 0.47, W * 0.36, H * 0.39); g.quadraticCurveTo(W * 0.3, H * 0.43, W * 0.24, H * 0.39); g.fill();
+      g.globalAlpha = 1;
+      caption(g, W, H, turned ? 'TURN AROUND IN TIME' : 'THE LIGHT FLICKERS... BREATHING');
     },
     exposure(g, W, H, T) {
       g.fillStyle = '#161616'; g.fillRect(0, 0, W, H);

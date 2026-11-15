@@ -15,7 +15,8 @@ Open `index.html` in a modern browser (Chrome, Edge or Firefox). You don't need 
 - **Noise stacks.** Every source adds up: walking with your flashlight on is louder than either alone.
 - **Echolocation:** about once a minute Siren Head pings the town. It finds you even if you're silent or hidden, and he creeps closer. Each ping is more accurate.
 - **The Exposure** lives in your camera's viewfinder. The longer the camera is up, the closer it creeps. At 10 seconds it lunges for 40 HP. Photographing it banishes it but burns you for 25 HP, and flash photos of nothing draw it in faster. Use your flashlight to see, not the camera.
-- **Moths** are only visible while your flashlight is on. They stand motionless in dark corners and alleys. Keep your flashlight on one for 2 seconds and it **shrieks**: you lose 20 HP, and Siren Head hears it and gets angrier. Sweep your beam past them.
+- **Moths** are only visible while your flashlight is on. They stand motionless in dark corners and alleys. Keep your flashlight on one for about 1 second and it **shrieks**: you lose 20 HP, and Siren Head hears it and gets angrier. Sweep your beam past them.
+- **The Sneaky One** creeps up behind you on a random timer (30 s – 3 min, paused while Siren Head is close enough to hear your flashlight). Your flashlight flickers and you hear breathing. Turn around within about 2.5 seconds or it kills you.
 - **Rocks:** you occasionally find rocks on the ground (carry up to 3). Throw one with **G** and it lands loudly, pulling Siren Head toward that spot.
 - **Listen to the wind.** It blows dust and leaves through town. After 15 seconds of total silence it **stops completely** and the whole world goes silent with it: no music, no voices, none of Siren Head's sounds and no text on screen. That's your first warning.
 - **Don't stay completely silent for too long either.** After 20 seconds of total silence (hiding counts), **the Silent One (Phenomenon-249)** starts closing in. At 30 seconds it attacks, taking 5 HP every second until you make any sound.
@@ -55,6 +56,7 @@ js/world.js       the town, buildings, props, evidence and hiding spots
 js/sirenhead.js   Siren Head model, animation and hearing behaviour
 js/player.js      movement, noise, stamina, flashlight, camera and hiding
 js/moths.js       the Moths
+js/sneaky.js      the Sneaky One
 js/deathroom.js   death screen (TV tape + notebook)
 js/cutscenes.js   opening and ending cutscenes
 js/main.js        game flow, menus and main loop

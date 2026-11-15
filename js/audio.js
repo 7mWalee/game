@@ -499,6 +499,25 @@
     th.connect(g2); g2.connect(sfxBus); th.start(t); th.stop(t + 0.3);
   };
 
+  // ---------- THE SNEAKY ONE: slow, wet breathing right behind you ----------
+  A.sneakyBreath = function (pos) {
+    if (!ctx) return { move() {}, stop() {} };
+    const p = panner(pos, 1.5, 1.2);
+    const n = noiseSrc(false, true);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 650; f.Q.value = 2.5;
+    const amp = ctx.createGain(); amp.gain.value = 0;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 1.4;
+    const lg = ctx.createGain(); lg.gain.value = 0.9;
+    lfo.connect(lg); lg.connect(amp.gain);
+    const g = ctx.createGain(); g.gain.value = 0; g.gain.setTargetAtTime(1.1, ctx.currentTime, 0.15);
+    n.connect(f); f.connect(amp); amp.connect(g); g.connect(p); p.connect(sfxBus);
+    n.start(); lfo.start();
+    return {
+      move(pp) { setPannerPos(p, pp); },
+      stop() { const t = ctx.currentTime; g.gain.setTargetAtTime(0, t, 0.05); n.stop(t + 0.4); lfo.stop(t + 0.4); },
+    };
+  };
+
   // ---------- THE EXPOSURE ----------
   let expo = null;
   // a lens-whine and detuned hum that grows as it gets closer in the viewfinder

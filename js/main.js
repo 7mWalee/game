@@ -7,6 +7,7 @@
   const $ = id => document.getElementById(id);
   const EVIDENCE_NEEDED = 5;
 
+  let sneaky = null;
   let renderer, scene, camera, world, siren, player, moths, deathRoom, deathShown = false, deathTimer = null, titleSpot = null;
   let state = 'gate';          // gate | title | opening | play | paused | dying | dead | ending | credits
   let cutscene = null, cutCtx = null;
@@ -121,7 +122,9 @@
     world = LO.World.build(scene);
     siren = new LO.SirenHead(scene, world);
     if (moths) moths.dispose();
+    if (sneaky) scene && sneaky.root.parent && sneaky.root.parent.remove(sneaky.root);
     moths = new LO.Moths(scene, world);
+    sneaky = new LO.Sneaky(scene, world);
     titleSpot = new THREE.SpotLight(0xfff1d6, 0, 90, 0.42, 0.5, 1.2);
     scene.add(titleSpot, titleSpot.target);
     moths.onShriek = pos => {
@@ -425,6 +428,7 @@
     siren.spawnFar();
     player.reset(world.spawn, Math.PI);
     moths.reset();
+    sneaky.reset();
     gameTime = 0;
     lastEvidenceTime = 0; hintUntil = 0; hintTarget = null;
     updateEvidenceUI();
@@ -576,6 +580,7 @@
   }
 
   function startEnding() {
+    if (sneaky) sneaky.reset();
     if (moths) { moths.root.visible = false; A.setMothFlutter(0); }
     state = 'ending';
     player.enabled = false;
@@ -637,6 +642,7 @@
   // death by damage (the Silent One / the Tenant)
   function dieBy(cause) {
     if (state === 'play') A.silenceWorld(true);
+    if (sneaky && cause !== 'sneaky' && sneaky.attacking) sneaky.vanish(player, false);
     if (state !== 'play') return;
     dieCause = cause;
     state = 'dying';
@@ -651,6 +657,7 @@
     A.setMothFlutter(0);
   }
   function onCaught() {
+    if (sneaky && sneaky.attacking) sneaky.vanish(player, false);
     if (state === 'play' && !siren.catchDisabled) A.silenceWorld(true);
     if (state !== 'play' || siren.catchDisabled) return;
     dieCause = 'siren';
@@ -854,6 +861,7 @@
       player.update(dt, gameTime);
       siren.update(dt, player, gameTime);
       if (state === 'play') moths.update(dt, player, camera, gameTime);
+      if (state === 'play' && sneaky.update(dt, player, camera, siren) === 'kill') dieBy('sneaky');
       world.update(dt, gameTime);
       updateHUD();
       updateHintUI();
@@ -964,7 +972,7 @@
     gate.addEventListener('click', leaveGate);
     window.addEventListener('keydown', leaveGate);
     // expose for debugging
-    LO.debug = { setTitleT(t) { titleT = t; }, get deathRoom() { return deathRoom; }, setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, get moths() { return moths; }, startGame, startEnding, beginPlay };
+    LO.debug = { setTitleT(t) { titleT = t; }, get deathRoom() { return deathRoom; }, setGameTime(t) { gameTime = t; }, get cutscene() { return cutscene; }, get state() { return state; }, get world() { return world; }, get siren() { return siren; }, get player() { return player; }, get moths() { return moths; }, get sneaky() { return sneaky; }, startGame, startEnding, beginPlay };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

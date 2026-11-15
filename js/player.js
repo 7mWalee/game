@@ -82,6 +82,7 @@
     this.silentTick = 0;
     this.noSilent = false;
     this.calm = false;
+    this.flickerForce = false;
     this.exposure = 0;
     this.spike = 0;
     this.noiseRadius = 0;
@@ -250,7 +251,9 @@
     }
     let flick = 0;
     if (this.flashOn && this.battery < 15 && Math.random() < 0.08) flick = 1;
-    this.flash.intensity = this.flashOn ? (flick ? 0.3 : 1) * (LO.settings.lighting === 'simple' ? 3 : 8) * Math.min(1, 0.4 + this.battery / 40) : 0;
+    // the Sneaky One makes the light stutter while it's behind you
+    if (this.flickerForce && Math.random() < 0.35) flick = 1;
+    this.flash.intensity = this.flashOn ? (flick ? (this.flickerForce ? 0.02 : 0.3) : 1) * (LO.settings.lighting === 'simple' ? 3 : 8) * Math.min(1, 0.4 + this.battery / 40) : 0;
     LO.audio.setFlashlightBuzz(this.flashOn, this.battery < 15 ? 1 : 0);
 
     // ---------- noise ----------
