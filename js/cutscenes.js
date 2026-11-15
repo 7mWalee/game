@@ -172,53 +172,129 @@
       police.push(c);
       addVehicle(c, x, z, d, 20);
     });
-    function truck(color, label) {
+    // ---- heavy trucks: proper cab, chassis, six rimmed wheels ----
+    const chromeM = W.mat({ color: 0xa8a8a8, roughness: 0.35, metalness: 0.8 });
+    const glassM = W.M.glass, darkM = W.M.dark, steelM = W.mat({ color: 0x3a3c40, roughness: 0.5, metalness: 0.6 });
+    function box(w, h, d, m, x, y, z, parent, rx, ry, rz) {
+      const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.rotation.set(rx || 0, ry || 0, rz || 0); parent.add(o); return o;
+    }
+    function cyl(rt, rb, h, m, x, y, z, parent, rx, rz, seg) {
+      const o = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 14), m); o.position.set(x, y, z); o.rotation.set(rx || 0, 0, rz || 0); parent.add(o); return o;
+    }
+    function truck(color, label, bed) {
       const g = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.8, 7), W.mat({ color, roughness: 0.6, metalness: 0.3 }));
-      body.position.set(0, 1.9, -0.8); g.add(body);
-      const cab = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.2, 2.2), W.mat({ color: 0x1a1a1a }));
-      cab.position.set(0, 1.6, 3.6); g.add(cab);
-      const wg = new THREE.CylinderGeometry(0.55, 0.55, 0.5, 12);
-      [[-1.4, 3], [1.4, 3], [-1.4, -1], [1.4, -1], [-1.4, -3], [1.4, -3]].forEach(([x, z]) => {
-        const w = new THREE.Mesh(wg, W.M.tire); w.rotation.z = Math.PI / 2; w.position.set(x, 0.55, z); g.add(w);
+      const paint = W.mat({ color, roughness: 0.55, metalness: 0.3 });
+      box(2.3, 0.35, 8.2, steelM, 0, 0.75, -0.4, g);                                   // chassis rails
+      // cab with windscreen, side windows, grille, bumper, mirrors
+      box(2.6, 1.5, 2.2, paint, 0, 1.75, 3.0, g);
+      box(2.5, 0.85, 1.9, paint, 0, 2.9, 2.85, g);
+      box(2.2, 0.7, 0.04, glassM, 0, 2.95, 3.81, g, -0.08);
+      [-1, 1].forEach(sd => { box(0.04, 0.6, 1.3, glassM, sd * 1.26, 2.95, 2.95, g); box(0.1, 0.35, 0.2, darkM, sd * 1.45, 2.8, 3.6, g); });
+      box(1.8, 0.8, 0.06, darkM, 0, 1.55, 4.11, g);
+      for (let i = 0; i < 5; i++) box(1.7, 0.04, 0.03, chromeM, 0, 1.25 + i * 0.15, 4.15, g);
+      box(2.7, 0.3, 0.3, chromeM, 0, 0.85, 4.2, g);
+      [-0.95, 0.95].forEach(x => box(0.38, 0.2, 0.05, new THREE.MeshBasicMaterial({ color: 0xfff2cc }), x, 1.3, 4.14, g));
+      // six wheels with rims
+      const tg = new THREE.CylinderGeometry(0.55, 0.55, 0.45, 16), rg = new THREE.CylinderGeometry(0.32, 0.32, 0.47, 10);
+      [[-1.25, 3.0], [1.25, 3.0], [-1.25, -1.6], [1.25, -1.6], [-1.25, -3.0], [1.25, -3.0]].forEach(([x, z]) => {
+        const w = new THREE.Mesh(tg, W.M.tire); w.rotation.z = Math.PI / 2; w.position.set(x, 0.55, z); g.add(w);
+        const r = new THREE.Mesh(rg, chromeM); r.rotation.z = Math.PI / 2; r.position.set(x, 0.55, z); g.add(r);
       });
+      if (bed === 'box') {
+        box(2.6, 2.6, 5.4, paint, 0, 2.25, -1.6, g);
+        box(2.62, 0.1, 5.42, steelM, 0, 3.55, -1.6, g);
+      } else {
+        box(2.5, 0.25, 5.4, steelM, 0, 1.05, -1.6, g);                                  // flatbed
+      }
       if (label) {
         const c = document.createElement('canvas'); c.width = 256; c.height = 64;
         const x = c.getContext('2d'); x.fillStyle = '#ddd'; x.font = 'bold 44px Arial'; x.textAlign = 'center'; x.fillText(label, 128, 48);
         const m = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
-        m.position.set(1.42, 2.4, -0.8); m.rotation.y = Math.PI / 2; g.add(m);
-        const m2 = m.clone(); m2.position.x = -1.42; m2.rotation.y = -Math.PI / 2; g.add(m2);
+        const y = bed === 'box' ? 2.6 : 1.75, z = bed === 'box' ? -1.6 : 3.0, hx = bed === 'box' ? 1.32 : 1.32;
+        m.position.set(hx, y, z); m.rotation.y = Math.PI / 2; g.add(m);
+        const m2 = m.clone(); m2.position.x = -hx; m2.rotation.y = -Math.PI / 2; g.add(m2);
       }
-      const beacon = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.3), new THREE.MeshBasicMaterial({ color: 0xff8800 }));
-      beacon.position.set(0, 2.8, 3.6); g.add(beacon);
+      const beacon = box(0.6, 0.18, 0.3, new THREE.MeshBasicMaterial({ color: 0xff8800 }), 0, 3.42, 2.85, g);
       g.userData.beacon = beacon;
       return g;
     }
-    const swat1 = addVehicle(truck(0x1d2430, 'S.W.A.T.'), -2.5, -52, 2.6, 16);
-    const swat2 = addVehicle(truck(0x1d2430, 'S.W.A.T.'), 2.5, -60, 3.2, 16);
-    // crane trucks with booms that fire restraint cables
+    const swat1 = addVehicle(truck(0x1d2430, 'S.W.A.T.', 'box'), -2.5, -52, 2.6, 16);
+    const swat2 = addVehicle(truck(0x1d2430, 'S.W.A.T.', 'box'), 2.5, -60, 3.2, 16);
+
+    // ---- power winch trucks: winch drum, hydraulic ram and a lattice boom with a hook ----
     const cranes = [];
+    const yellow = W.mat({ color: 0xd8b030, roughness: 0.55, metalness: 0.2 });
     [[-4, -18, 3.6], [4, -19, 4.4]].forEach(([x, z, d]) => {
-      const t = truck(0xc9a227, 'RESTRAINT');
-      const boom = new THREE.Group(); boom.position.set(0, 3.3, -2); t.add(boom);
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 11), W.mat({ color: 0xd8b030, roughness: 0.6 }));
-      arm.position.z = 5.5; boom.add(arm);
+      const t = truck(0xc9a227, 'RESTRAINT', 'flat');
+      // winch drum wound with cable
+      cyl(0.45, 0.45, 1.8, yellow, 0, 1.75, -3.4, t, 0, Math.PI / 2);
+      cyl(0.4, 0.4, 1.5, darkM, 0, 1.75, -3.4, t, 0, Math.PI / 2, 20);
+      [-1, 1].forEach(sd => box(0.12, 1.2, 1.1, yellow, sd * 1.0, 1.65, -3.4, t));
+      // outriggers planted on the road
+      [[-1, 0.6], [1, 0.6], [-1, -3.9], [1, -3.9]].forEach(([sd, oz]) => {
+        box(1.0, 0.18, 0.25, yellow, sd * 1.7, 0.9, oz, t);
+        box(0.2, 0.9, 0.2, steelM, sd * 2.15, 0.45, oz, t);
+        box(0.5, 0.06, 0.5, steelM, sd * 2.15, 0.03, oz, t);
+      });
+      // turntable + boom (pivots at its base)
+      cyl(0.9, 1.0, 0.35, steelM, 0, 1.35, -1.6, t);
+      const boom = new THREE.Group(); boom.position.set(0, 2.0, -1.9); t.add(boom);
+      const L = 11;
+      [-0.32, 0.32].forEach(xo => { box(0.16, 0.16, L, yellow, xo, 0.3, L / 2, boom); box(0.16, 0.16, L, yellow, xo, -0.3, L / 2, boom); });
+      for (let i = 0; i <= 11; i++) {                                                   // lattice
+        const zz = i * L / 11;
+        box(0.8, 0.06, 0.06, yellow, 0, 0.3, zz, boom); box(0.8, 0.06, 0.06, yellow, 0, -0.3, zz, boom);
+        [-0.32, 0.32].forEach(xo => box(0.06, 0.06, 0.95, yellow, xo, 0, zz + 0.45, boom, 0.63));
+      }
+      cyl(0.35, 0.35, 0.8, steelM, 0, 0, L, boom, 0, Math.PI / 2);                      // head pulley
+      const hookLine = cyl(0.03, 0.03, 1.6, darkM, 0, -0.8, L, boom);
+      const hook = box(0.35, 0.45, 0.25, steelM, 0, -1.7, L, boom);
+      // hydraulic ram from the bed to the boom
+      const ram = cyl(0.14, 0.14, 4.2, chromeM, 0, -0.6, 2.2, boom, -1.2);
+      const ramBody = cyl(0.2, 0.2, 2.2, yellow, 0, -1.4, 1.1, boom, -1.2);
       boom.rotation.x = -0.05;
-      const tip = new THREE.Object3D(); tip.position.z = 11; boom.add(tip);
-      t.userData.boom = boom; t.userData.tip = tip;
+      const tip = new THREE.Object3D(); tip.position.z = L; boom.add(tip);
+      t.userData.boom = boom; t.userData.tip = tip; t.userData.hook = [hookLine, hook];
+      void ram; void ramBody;
       cranes.push(addVehicle(t, x, z, d, 15));
     });
     void swat1; void swat2;
 
-    // helicopter
+    // ---- police helicopter ----
     const heli = new THREE.Group();
     {
-      const hb = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 8), W.mat({ color: 0x223322, roughness: 0.5 }));
-      hb.scale.set(1, 0.9, 1.6); heli.add(hb);
-      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 5), W.mat({ color: 0x223322 })); tail.position.z = -3.6; heli.add(tail);
-      const rotor = new THREE.Mesh(new THREE.BoxGeometry(10, 0.05, 0.3), W.M.dark); rotor.position.y = 1.5; heli.add(rotor);
-      heli.userData.rotor = rotor;
+      const body = W.mat({ color: 0x14213a, roughness: 0.45, metalness: 0.35 });
+      const white = W.mat({ color: 0xe0e0e0, roughness: 0.5 });
+      const canopy = new THREE.MeshStandardMaterial({ color: 0x0b1c24, roughness: 0.08, metalness: 0.6, transparent: true, opacity: 0.85 });
+      const cabin = new THREE.Mesh(new THREE.SphereGeometry(1.25, 18, 14), body); cabin.scale.set(1.05, 1.0, 1.65); heli.add(cabin);
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(1.22, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), canopy);
+      nose.rotation.x = Math.PI / 2 - 0.25; nose.position.set(0, 0.15, 1.0); nose.scale.set(1.0, 1.0, 0.9); heli.add(nose);
+      box(2.65, 0.25, 2.2, white, 0, -0.35, -0.2, heli);                                  // police stripe
+      const boomG = new THREE.CylinderGeometry(0.18, 0.42, 5.2, 12); boomG.rotateX(Math.PI / 2);
+      const tailBoom = new THREE.Mesh(boomG, body); tailBoom.position.set(0, 0.25, -4.3); heli.add(tailBoom);
+      box(0.12, 1.5, 0.9, body, 0, 0.9, -6.6, heli, 0.3);                                 // vertical fin
+      box(1.8, 0.08, 0.6, body, 0, 0.3, -6.1, heli);                                      // stabiliser
+      const tailRotor = new THREE.Group(); tailRotor.position.set(0.2, 0.9, -6.75); heli.add(tailRotor);
+      box(0.04, 1.4, 0.16, darkM, 0, 0, 0, tailRotor); box(0.04, 0.16, 1.4, darkM, 0, 0, 0, tailRotor);
+      // skids
+      [-1, 1].forEach(sd => {
+        const sk = cyl(0.07, 0.07, 3.6, steelM, sd * 0.95, -1.55, 0, heli, Math.PI / 2);
+        void sk;
+        [0.9, -0.9].forEach(zz => cyl(0.05, 0.05, 0.75, steelM, sd * 0.85, -1.2, zz, heli, 0, sd * 0.25));
+      });
+      // main rotor: mast, hub, four blades
+      cyl(0.12, 0.15, 0.6, steelM, 0, 1.45, -0.2, heli);
+      const rotor = new THREE.Group(); rotor.position.set(0, 1.8, -0.2); heli.add(rotor);
+      cyl(0.28, 0.28, 0.18, steelM, 0, 0, 0, rotor);
+      for (let i = 0; i < 4; i++) { const bl = box(5.2, 0.05, 0.32, darkM, 2.6, 0, 0, new THREE.Group(), 0, 0, 0); bl.parent.rotation.y = i * Math.PI / 2; rotor.add(bl.parent); }
+      heli.userData.rotor = rotor; heli.userData.tailRotor = tailRotor;
+      // searchlight under the nose + nav lights
+      cyl(0.22, 0.28, 0.4, steelM, 0, -1.05, 1.3, heli, Math.PI / 2 - 0.4);
+      const navR = cyl(0.07, 0.07, 0.07, new THREE.MeshBasicMaterial({ color: 0xff2020 }), -1.3, 0, -0.2, heli);
+      const navG = cyl(0.07, 0.07, 0.07, new THREE.MeshBasicMaterial({ color: 0x20ff40 }), 1.3, 0, -0.2, heli);
+      heli.userData.nav = [navR, navG];
       const spot = new THREE.SpotLight(0xffffff, 8, 120, 0.22, 0.4, 1);
+      spot.position.set(0, -1.1, 1.4);
       const tg = new THREE.Object3D(); group.add(tg);
       spot.target = tg; heli.add(spot); heli.userData.spotTarget = tg;
       heli.position.set(0, 60, -300);
@@ -310,6 +386,8 @@
       heli.position.set(Math.sin(ha) * hr, lerp(60, 34, clamp01(t / 14)), -Math.cos(ha) * hr - (t < 14 ? 0 : 0));
       heli.lookAt(0, heli.position.y, 0);
       heli.userData.rotor.rotation.y += dt * 30;
+      heli.userData.tailRotor.rotation.x += dt * 45;
+      heli.userData.nav.forEach((n, i) => { n.visible = Math.sin(t * 6 + i * Math.PI) > 0; });
       heli.userData.spotTarget.position.copy(siren.pos).setY(6);
       if (heliSnd) heliSnd.move(heli.position);
       if (sirens[0]) sirens[0].move(police[0].position);

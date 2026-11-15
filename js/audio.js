@@ -499,6 +499,24 @@
     th.connect(g2); g2.connect(sfxBus); th.start(t); th.stop(t + 0.3);
   };
 
+  // ---------- police radio: key-up chirp and squelch tail around each transmission ----------
+  A.radioIn = function () {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(1250, t);
+    const g = ctx.createGain(); env(g, t, 0.003, 0.06, 0.09, 0.0001);
+    o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 0.12);
+    A.staticBurst(null, 0.18, 0.08);
+  };
+  A.radioOut = function () {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const n = noiseSrc(false, false);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 0.8;
+    const g = ctx.createGain(); env(g, t, 0.002, 0.14, 0.22, 0.0001);
+    n.connect(f); f.connect(g); g.connect(sfxBus); n.start(t); n.stop(t + 0.3);
+  };
+
   // ---------- THE SNEAKY ONE: slow, wet breathing right behind you ----------
   A.sneakyBreath = function (pos) {
     if (!ctx) return { move() {}, stop() {} };
@@ -1120,7 +1138,19 @@
     if (!voices.length) return null;
     const find = re => voices.find(v => re.test(v.name));
     if (role === 'player') return find(/Daniel|Guy|Male|David|Alex|Fred|Google UK English Male/i) || voices[0];
-    if (role === 'radio') return find(/Samantha|Zira|Female|Karen|Google US English|Susan|Moira/i) || voices[1] || voices[0];
+    if (role === 'radio') {
+      // the most natural-sounding voice available: neural/online/enhanced voices first
+      const score = v => {
+        const n = v.name;
+        let s = 0;
+        if (/natural|neural|online|enhanced|premium|siri/i.test(n)) s += 10;
+        if (/Ava|Allison|Samantha|Aria|Jenny|Michelle|Sara|Emma|Joanna|Google US English/i.test(n)) s += 5;
+        if (/en[-_]US/i.test(v.lang)) s += 2;
+        if (/Zira|Hazel|Fred|Albert|Bad News|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|eSpeak/i.test(n)) s -= 20;
+        return s;
+      };
+      return voices.slice().sort((a, b) => score(b) - score(a))[0] || voices[0];
+    }
     if (role === 'siren') return find(/Fred|Bad News|Whisper|Zarvox|Daniel|Male/i) || voices[0];
     return voices[0];
   }
@@ -1176,7 +1206,7 @@
     };
     if (!overlay) speaking = true;
 
-    if (role === 'radio') A.staticBurst(null, 0.35, 0.12);
+    if (role === 'radio') { A.radioIn(); }
     if (A.still) { setTimeout(finish, 50); return; } // the world is silent
     // the player's own recorded voice, when there is a take for this line
     const rec = role === 'player' && voiceSamples[text];
@@ -1197,12 +1227,25 @@
         const u = new SpeechSynthesisUtterance(text);
         const v = pickVoice(role); if (v) u.voice = v;
         if (role === 'player') { u.pitch = 0.9; u.rate = 0.98; }
-        if (role === 'radio') { u.pitch = 1.15; u.rate = 1.05; }
+        if (role === 'radio') { u.pitch = 1.0; u.rate = 0.97; }
         if (role === 'siren') { u.pitch = 0.05; u.rate = 0.55; }
         if (opts.rate) u.rate *= opts.rate;
         u.volume = Math.max(0, Math.min(1, S.voice * S.master * (opts.volume === undefined ? 1 : opts.volume)));
-        u.onend = finish; u.onerror = finish;
-        synth.speak(u);
+        if (role === 'radio') {
+          const parts = text.split(/(?<=[.!?])\s+/).filter(Boolean);
+          let i = 0;
+          const next = () => {
+            if (i >= parts.length) { A.radioOut(); finish(); return; }
+            const pu = new SpeechSynthesisUtterance(parts[i++]);
+            pu.voice = u.voice; pu.pitch = u.pitch * (0.97 + Math.random() * 0.06); pu.rate = u.rate * (0.95 + Math.random() * 0.08); pu.volume = u.volume;
+            pu.onend = () => setTimeout(next, 140 + Math.random() * 160); pu.onerror = () => { A.radioOut(); finish(); };
+            synth.speak(pu);
+          };
+          next();
+        } else {
+          u.onend = finish; u.onerror = finish;
+          synth.speak(u);
+        }
         // safety net in case onend never fires
         setTimeout(finish, est * 2.2 + 2500);
       } catch (e) { setTimeout(finish, est); }

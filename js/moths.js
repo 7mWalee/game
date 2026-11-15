@@ -45,30 +45,120 @@
     this.spots = spots.filter(s => Math.hypot(s.x - W.spawn.x, s.z - W.spawn.z) > 30);
   };
 
-  Moths.prototype.makeMoth = function () {
-    const g = new THREE.Group();
-    const M = this.mat;
-    const limb = (r, len, x, y, z, rz) => {
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.7, len, 6), M);
-      m.position.set(x, y, z); m.rotation.z = rz || 0; g.add(m); return m;
+  // ---------- shared look: furry pale body, patterned wings, glossy compound eyes ----------
+  function wingTexture(hind) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const g = c.getContext('2d');
+    // base: dusty grey-brown, darker toward the body
+    const gr = g.createLinearGradient(0, 0, 256, 0);
+    gr.addColorStop(0, hind ? '#6d6253' : '#5a5045'); gr.addColorStop(1, hind ? '#a8998a' : '#9a8b78');
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+    // mottled dust
+    for (let i = 0; i < 2200; i++) { const v = Math.random() < 0.5 ? 255 : 0; g.fillStyle = `rgba(${v},${v},${v},${Math.random() * 0.08})`; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
+    // wavy bands
+    g.strokeStyle = 'rgba(40,30,22,0.55)'; g.lineWidth = 5;
+    [90, 150, 205].forEach(x => { g.beginPath(); for (let y = 0; y <= 256; y += 16) g.lineTo(x + Math.sin(y * 0.06) * 10, y); g.stroke(); });
+    // veins fanning out from the base
+    g.strokeStyle = 'rgba(30,22,16,0.45)'; g.lineWidth = 1.6;
+    for (let i = 0; i < 9; i++) { g.beginPath(); g.moveTo(0, 128); g.quadraticCurveTo(110, 128 + (i - 4) * 18, 256, (i + 0.5) * 28); g.stroke(); }
+    // an eyespot
+    const ex = hind ? 160 : 175, ey = hind ? 120 : 110;
+    [[26, '#1c140e'], [20, '#c9b48e'], [12, '#2a1a12'], [4, '#e8dcc0']].forEach(([r, col]) => { g.fillStyle = col; g.beginPath(); g.arc(ex, ey, r, 0, 7); g.fill(); });
+    // ragged, torn edges (alpha)
+    g.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 26; i++) { g.beginPath(); g.arc(256 - Math.random() * 18, Math.random() * 256, 4 + Math.random() * 10, 0, 7); g.fill(); }
+    for (let i = 0; i < 10; i++) { g.beginPath(); g.arc(Math.random() * 256, 256 - Math.random() * 10, 3 + Math.random() * 8, 0, 7); g.fill(); }
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  function furTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#cfc6b4'; g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 1400; i++) {
+      const v = 150 + Math.random() * 90; g.strokeStyle = `rgba(${v},${v - 8},${v - 20},0.6)`; g.lineWidth = 1;
+      const x = Math.random() * 128, y = Math.random() * 128; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (Math.random() - 0.5) * 3, y + 4 + Math.random() * 5); g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 3); t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  // a wing outline with UVs mapped across the texture
+  function wingGeo(pts) {
+    const sh = new THREE.Shape(); pts.forEach(([x, y], i) => i ? sh.lineTo(x, y) : sh.moveTo(x, y));
+    const geo = new THREE.ShapeGeometry(sh);
+    geo.computeBoundingBox(); const bb = geo.boundingBox;
+    const uv = geo.attributes.uv, pos = geo.attributes.position;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) - bb.min.x) / (bb.max.x - bb.min.x), (pos.getY(i) - bb.min.y) / (bb.max.y - bb.min.y));
+    return geo;
+  }
+
+  Moths.prototype.kit = function () {
+    if (this._kit) return this._kit;
+    const fur = new THREE.MeshLambertMaterial({ map: furTexture(), color: 0xe6dccb });
+    const skin = new THREE.MeshLambertMaterial({ color: 0xb8ae9c });
+    const eye = new THREE.MeshStandardMaterial({ color: 0x120808, roughness: 0.12, metalness: 0.2 });
+    const fore = new THREE.MeshLambertMaterial({ map: wingTexture(false), side: THREE.DoubleSide, alphaTest: 0.45, transparent: true });
+    const hind = new THREE.MeshLambertMaterial({ map: wingTexture(true), side: THREE.DoubleSide, alphaTest: 0.45, transparent: true });
+    const V2 = THREE.Vector2;
+    const lathe = (len, prof, seg) => new THREE.LatheGeometry(prof.map(([r, t]) => new V2(r, -t * len)), seg || 8);
+    this._kit = {
+      fur, skin, eye, fore, hind,
+      thorax: lathe(0.75, [[0.05, 0], [0.2, 0.08], [0.24, 0.35], [0.2, 0.75], [0.12, 1]], 10),
+      abdomen: lathe(0.55, [[0.12, 0], [0.16, 0.3], [0.13, 0.75], [0.05, 1]], 10),
+      leg: lathe(1.0, [[0.06, 0], [0.055, 0.45], [0.035, 0.55], [0.03, 0.95], [0.02, 1]], 6),
+      arm: lathe(0.62, [[0.04, 0], [0.03, 0.9], [0.022, 1]], 6),
+      finger: lathe(0.2, [[0.012, 0], [0.004, 1]], 4),
+      head: new THREE.SphereGeometry(0.13, 12, 10),
+      eyeG: new THREE.SphereGeometry(0.075, 12, 10),
+      collar: new THREE.ConeGeometry(0.03, 0.14, 4),
+      foreG: wingGeo([[0, 0], [0.25, 0.32], [0.78, 0.5], [0.95, 0.25], [0.8, -0.1], [0.4, -0.28], [0.08, -0.12]]),
+      hindG: wingGeo([[0, 0], [0.4, 0.05], [0.72, -0.15], [0.7, -0.5], [0.38, -0.62], [0.1, -0.35]]),
     };
-    limb(0.07, 1.25, -0.11, 0.62, 0); limb(0.07, 1.25, 0.11, 0.62, 0);     // legs
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.12, 0.95, 7), M);
-    body.position.y = 1.7; g.add(body);
-    limb(0.045, 1.25, -0.27, 1.45, 0, 0.08); limb(0.045, 1.25, 0.27, 1.45, 0, -0.08); // long arms
-    const neck = limb(0.05, 0.3, 0, 2.3, 0);
-    void neck;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), M);
-    head.scale.set(0.9, 1.35, 0.9); head.position.y = 2.58; g.add(head);
-    // folded, ragged wings on the back
+    return this._kit;
+  };
+
+  Moths.prototype.makeMoth = function () {
+    const K = this.kit();
+    const g = new THREE.Group();
+    const add = (geo, mat, x, y, z, rx, ry, rz, parent) => {
+      const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, rz || 0); (parent || g).add(m); return m;
+    };
+    // long, thin, slightly bent legs
+    [-1, 1].forEach(sd => { add(K.leg, K.skin, sd * 0.1, 1.28, 0, 0.06, 0, sd * 0.03); add(K.leg, K.skin, sd * 0.11, 0.55, 0.05, -0.12, 0, 0).scale.setScalar(0.62); });
+    // furry thorax and a hanging, segmented abdomen
+    add(K.thorax, K.fur, 0, 2.15, 0).scale.set(1, 1, 0.75);
+    const ab = add(K.abdomen, K.fur, 0, 1.42, -0.04); ab.scale.set(0.9, 1, 0.8);
+    for (let i = 0; i < 3; i++) add(new THREE.TorusGeometry(0.135 - i * 0.012, 0.012, 4, 14), K.skin, 0, 1.3 - i * 0.12, -0.04, Math.PI / 2);
+    // a ruff of fur around the neck
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; add(K.collar, K.fur, Math.cos(a) * 0.17, 2.1, Math.sin(a) * 0.13, Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2); }
+    // long arms with spindly fingers
+    [-1, 1].forEach(sd => {
+      const sh = new THREE.Group(); sh.position.set(sd * 0.2, 2.05, 0.02); sh.rotation.z = sd * 0.12; g.add(sh);
+      add(K.arm, K.skin, 0, 0, 0, 0, 0, 0, sh);
+      const el = new THREE.Group(); el.position.y = -0.62; el.rotation.x = -0.25; sh.add(el);
+      add(K.arm, K.skin, 0, 0, 0, 0, 0, 0, el);
+      for (let f = 0; f < 3; f++) add(K.finger, K.skin, (f - 1) * 0.025, -0.62, 0, 0.2, 0, (f - 1) * 0.15, el);
+    });
+    // the head: big, glossy, black compound eyes and feathery antennae
+    const head = new THREE.Group(); head.position.y = 2.28; g.add(head);
+    add(K.head, K.fur, 0, 0.05, 0, 0, 0, 0, head).scale.set(1, 1.05, 0.95);
+    [-1, 1].forEach(sd => {
+      add(K.eyeG, K.eye, sd * 0.085, 0.07, 0.07, 0, 0, 0, head).scale.set(0.85, 1.1, 0.9);
+      const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(sd * 0.04, 0.16, 0.06), new THREE.Vector3(sd * 0.14, 0.34, 0.1), new THREE.Vector3(sd * 0.3, 0.42, 0.02)]);
+      add(new THREE.TubeGeometry(curve, 10, 0.008, 4), K.skin, 0, 0, 0, 0, 0, 0, head);
+      for (let b = 1; b < 9; b++) {           // feathery barbs
+        const p = curve.getPoint(b / 9);
+        add(new THREE.CylinderGeometry(0.003, 0.003, 0.07, 3), K.skin, p.x, p.y + 0.02, p.z, 0.4, 0, sd * 0.6, head);
+      }
+    });
+    // four wings, half-folded behind the back
     const wings = [];
     [-1, 1].forEach(side => {
-      const shape = new THREE.Shape();
-      shape.moveTo(0, 0); shape.lineTo(side * 0.55, 0.35); shape.lineTo(side * 0.7, -0.4);
-      shape.lineTo(side * 0.45, -0.9); shape.lineTo(side * 0.2, -0.6); shape.lineTo(0, -0.75);
-      const w = new THREE.Mesh(new THREE.ShapeGeometry(shape), this.wingMat);
-      w.position.set(0, 2.05, -0.14); w.rotation.y = side * 0.5;
-      g.add(w); wings.push({ mesh: w, side });
+      const root = new THREE.Group(); root.position.set(side * 0.08, 2.05, -0.14); g.add(root);
+      const fw = new THREE.Mesh(K.foreG, K.fore); fw.scale.set(side * 1.15, 1.15, 1); fw.rotation.z = side * 0.15; root.add(fw);
+      const hw = new THREE.Mesh(K.hindG, K.hind); hw.scale.set(side * 1.05, 1.05, 1); hw.position.set(0, -0.08, -0.01); hw.rotation.z = side * 0.05; root.add(hw);
+      root.rotation.y = side * 0.5;
+      wings.push({ mesh: root, side });
     });
     g.visible = false;
     this.root.add(g);

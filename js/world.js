@@ -366,34 +366,61 @@
       }
     }
 
+    // dumpster: a bin on wheels with a lid hinged at the back (opens when you climb in/out)
     function dumpster(x, z, ry) {
       const g = new THREE.Group();
-      const b = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.3, 1.3), M.dumpster); b.position.y = 0.75; g.add(b);
-      const lid = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 1.4), M.dark); lid.position.set(0, 1.44, -0.05); lid.rotation.x = -0.08; g.add(lid);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.18, 1.3), M.dumpster); b.position.y = 0.79; g.add(b);
+      const rim = new THREE.Mesh(new THREE.BoxGeometry(2.28, 0.08, 1.38), M.dumpster); rim.position.y = 1.4; g.add(rim);
+      // ribs and side bars
+      [-0.75, 0, 0.75].forEach(rx => { const rb = new THREE.Mesh(new THREE.BoxGeometry(0.07, 1.1, 0.04), M.dumpster); rb.position.set(rx, 0.8, 0.67); g.add(rb); });
+      [-1, 1].forEach(sd => { const bar = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 1.0), M.pole); bar.position.set(sd * 1.16, 1.05, 0); g.add(bar); });
+      // casters
+      [[-0.95, -0.5], [0.95, -0.5], [-0.95, 0.5], [0.95, 0.5]].forEach(([wx, wz]) => {
+        const w = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 10), M.tire); w.rotation.z = Math.PI / 2; w.position.set(wx, 0.11, wz); g.add(w);
+      });
+      // the lid: hinged along the back edge
+      const hinge = new THREE.Group(); hinge.position.set(0, 1.45, -0.66); g.add(hinge);
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(2.26, 0.06, 1.36), M.dark); lid.position.set(0, 0.03, 0.68); hinge.add(lid);
+      const lidRidge = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.05, 0.1), M.dark); lidRidge.position.set(0, 0.07, 1.25); hinge.add(lidRidge);
+      hinge.rotation.x = -0.03;
       g.position.set(x, 0, z); g.rotation.y = ry; add(g);
       W.occluders.push(b);
       const c = Math.abs(Math.cos(ry)), s = Math.abs(Math.sin(ry));
       collider(x - (2.2 * c + 1.3 * s) / 2, x + (2.2 * c + 1.3 * s) / 2, z - (2.2 * s + 1.3 * c) / 2, z + (2.2 * s + 1.3 * c) / 2, 1.45);
-      // front of dumpster = local +z
       const front = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry));
       W.hideSpots.push({
         type: 'dumpster', mesh: g,
         pos: new THREE.Vector3(x, 1.05, z), yaw: ry,
         interact: new THREE.Vector3(x, 1, z).addScaledVector(front, 1.3),
         exit: new THREE.Vector3(x, 0, z).addScaledVector(front, 1.6),
+        setOpen(a) { hinge.rotation.x = -0.03 - a * 1.5; },
       });
     }
 
+    // locker: an open-fronted cabinet with a hinged, vented door
     function locker(x, z, ry) {
       const g = new THREE.Group();
-      const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.0, 0.6), M.locker); b.position.y = 1.0; g.add(b);
-      for (let i = 0; i < 4; i++) {
-        const slot = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.02), M.dark);
-        slot.position.set(0, 1.6 + i * 0.07, 0.31); g.add(slot);
+      const W2 = 0.9, H2 = 2.0, D2 = 0.6, t = 0.03;
+      const part = (w, h, d, px, py, pz, m) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m || M.locker); o.position.set(px, py, pz); g.add(o); return o; };
+      const back = part(W2, H2, t, 0, H2 / 2, -D2 / 2 + t / 2);
+      part(t, H2, D2, -W2 / 2 + t / 2, H2 / 2, 0); part(t, H2, D2, W2 / 2 - t / 2, H2 / 2, 0);
+      part(W2, t, D2, 0, H2 - t / 2, 0); part(W2, t, D2, 0, t / 2, 0);
+      part(W2 - 2 * t, 0.02, D2 - 0.06, 0, H2 - 0.35, -0.02);                         // inner shelf
+      part(W2 - 2 * t, H2 - 2 * t, 0.01, 0, H2 / 2, -D2 / 2 + t + 0.006, M.dark);     // dark inside
+      // the door, hinged on the left edge
+      const hinge = new THREE.Group(); hinge.position.set(-W2 / 2, 0, D2 / 2); g.add(hinge);
+      const door = new THREE.Mesh(new THREE.BoxGeometry(W2, H2 - 0.02, 0.025), M.locker); door.position.set(W2 / 2, H2 / 2, 0); hinge.add(door);
+      for (let i = 0; i < 5; i++) {
+        const slot = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.025, 0.02), M.dark);
+        slot.position.set(W2 / 2, 1.55 + i * 0.07, 0.015); hinge.add(slot);
       }
-      const seam = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.9, 0.02), M.dark); seam.position.set(0, 1, 0.31); g.add(seam);
+      for (let i = 0; i < 3; i++) {
+        const slot = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.025, 0.02), M.dark);
+        slot.position.set(W2 / 2, 0.25 + i * 0.07, 0.015); hinge.add(slot);
+      }
+      const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.16, 0.04), M.pole); handle.position.set(W2 - 0.1, 1.05, 0.03); hinge.add(handle);
       g.position.set(x, 0.12, z); g.rotation.y = ry; add(g);
-      W.occluders.push(b);
+      W.occluders.push(back, door);
       const c = Math.abs(Math.cos(ry)), s = Math.abs(Math.sin(ry));
       collider(x - (0.9 * c + 0.6 * s) / 2, x + (0.9 * c + 0.6 * s) / 2, z - (0.9 * s + 0.6 * c) / 2, z + (0.9 * s + 0.6 * c) / 2, 2.1);
       const front = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry));
@@ -402,6 +429,7 @@
         pos: new THREE.Vector3(x, 1.65, z), yaw: ry,
         interact: new THREE.Vector3(x, 1, z).addScaledVector(front, 0.9),
         exit: new THREE.Vector3(x, 0, z).addScaledVector(front, 1.1),
+        setOpen(a) { hinge.rotation.y = -a * 1.85; },
       });
     }
 
@@ -596,6 +624,7 @@
 
       const info = { F, hl, hd, t, pb, gapA, axis, sign, kind, sheriff: !!(opts && opts.sheriff), cx, cz };
       W.enterables.push(info);
+      decorate(fx0, fx1, fz0, fz1, H, F, { awning: kind === 'shop' || kind === 'office', awningMat: kind === 'shop' ? mat({ color: 0x5a1f1a }) : mat({ color: 0x1f3a5a }) });
 
       if (info.sheriff) {
         // SHERIFF sign above the door
@@ -649,6 +678,7 @@
       const doorA = R(-L / 4, L / 4);
       const dp = F.point(doorA, D / 2 + 0.05);
       W.closedFronts.push({ F, L, D, H, doorA, axis });
+      decorate(x0, x1, z0, z1, H, F, { awning: rand() < 0.25, doorA, awningMat: pick([mat({ color: 0x5a1f1a }), mat({ color: 0x2c4a2a }), mat({ color: 0x4a3f1f })]) });
       const door = box(axis === 'z' ? 1.6 : 0.1, 2.6, axis === 'z' ? 0.1 : 1.6, M.wood, dp.x, 1.3, dp.z);
       for (let i = 0; i < 3; i++) {
         box(axis === 'z' ? 2.0 : 0.12, 0.22, axis === 'z' ? 0.12 : 2.0, M.wood, dp.x, 0.7 + i * 0.8, dp.z, { rz: axis === 'z' ? R(-0.25, 0.25) : 0, rx: axis === 'x' ? R(-0.25, 0.25) : 0 });
@@ -691,6 +721,89 @@
         for (let i = 0; i < 4; i++) tree(cx + R(-6, 6), cz + R(-6, 6), R(0.8, 1.3), rand() < 0.7);
         const bench = box(2, 0.1, 0.6, M.wood, cx + R(-3, 3), 0.5, cz + R(-3, 3), { ry: R(0, 3), collide: true });
         void bench;
+      }
+    }
+
+    // =========================================================
+    //  BUILDING DETAIL — batched into a few merged meshes (cheap to draw)
+    // =========================================================
+    const DECO = new Map();   // material -> list of transformed geometries
+    const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
+    function decoBox(material, w, h, d, x, y, z, rx, ry, rz) {
+      const g = new THREE.BoxGeometry(w, h, d);
+      _q.setFromEuler(_e.set(rx || 0, ry || 0, rz || 0));
+      g.applyMatrix4(_m4.compose(_p.set(x, y, z), _q, _s.set(1, 1, 1)));
+      if (!DECO.has(material)) DECO.set(material, []);
+      DECO.get(material).push(g.index ? g.toNonIndexed() : g);
+    }
+    function decoCyl(material, rt, rb, h, x, y, z, seg) {
+      const g = new THREE.CylinderGeometry(rt, rb, h, seg || 10);
+      g.applyMatrix4(_m4.makeTranslation(x, y, z));
+      if (!DECO.has(material)) DECO.set(material, []);
+      DECO.get(material).push(g.toNonIndexed());
+    }
+    function flushDeco() {
+      DECO.forEach((list, material) => {
+        let n = 0; list.forEach(g => n += g.attributes.position.count);
+        const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+        let o = 0;
+        list.forEach(g => {
+          pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3);
+          if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
+          o += g.attributes.position.count; g.dispose();
+        });
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+        geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        geo.computeBoundingSphere();
+        const mesh = new THREE.Mesh(geo, material);
+        if (shadows) { mesh.castShadow = true; mesh.receiveShadow = true; }
+        W.root.add(mesh);
+      });
+      DECO.clear();
+    }
+    // parapet, cornice, floor bands, plinth, rooftop clutter, fire escape, awning
+    function decorate(x0, x1, z0, z1, H, F, opts) {
+      opts = opts || {};
+      const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+      const P = 0.22, ph = 0.7;
+      decoBox(M.rubble, w + 0.3, ph, P, cx, H + ph / 2, z0 + P / 2 - 0.15);
+      decoBox(M.rubble, w + 0.3, ph, P, cx, H + ph / 2, z1 - P / 2 + 0.15);
+      decoBox(M.rubble, P, ph, d, x0 + P / 2 - 0.15, H + ph / 2, cz);
+      decoBox(M.rubble, P, ph, d, x1 - P / 2 + 0.15, H + ph / 2, cz);
+      decoBox(M.trim, w + 0.55, 0.22, d + 0.55, cx, H - 0.25, cz);                                   // cornice
+      for (let y = 3.6; y < H - 1.5; y += 3.2) decoBox(M.trim, w + 0.16, 0.12, d + 0.16, cx, y, cz);    // floor bands
+      decoBox(M.trim, w + 0.14, 0.55, d + 0.14, cx, 0.27, cz);                                          // plinth
+      // rooftop clutter
+      const r = rand();
+      if (r < 0.45) {   // water tank on stilts
+        const tx = cx + R(-w / 4, w / 4), tz = cz + R(-d / 4, d / 4);
+        decoCyl(M.wood, 1.1, 1.1, 2.0, tx, H + 2.4, tz, 12); decoCyl(M.roof, 0.05, 1.2, 0.6, tx, H + 3.7, tz, 12);
+        [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]].forEach(([a, b]) => decoBox(M.pole, 0.1, 1.4, 0.1, tx + a, H + 0.7, tz + b));
+      } else {
+        for (let i = 0; i < 2 + (rand() * 2 | 0); i++) decoBox(M.metal, R(1, 1.8), R(0.7, 1.1), R(1, 1.6), cx + R(-w / 3, w / 3), H + 0.45, cz + R(-d / 3, d / 3));
+      }
+      if (rand() < 0.5) { decoBox(M.pole, 0.06, R(2.5, 4.5), 0.06, cx + R(-w / 3, w / 3), H + 1.8, cz + R(-d / 3, d / 3)); }   // antenna
+      decoBox(M.brick, 0.7, 1.4, 0.7, cx + R(-w / 3, w / 3), H + 0.7, cz + R(-d / 3, d / 3));                                  // chimney / vent stack
+      // fire escape on a side wall of taller buildings
+      if (H > 9 && F && rand() < 0.75) {
+        const side = rand() < 0.5 ? -1 : 1;
+        const L2 = F.L, D2 = F.D;
+        for (let y = 3.6; y < H - 1; y += 3.2) {
+          const p0 = F.point(side * (L2 / 2 + 0.55), 0), along = F.axis === 'z';
+          const a = 2.8, b = 1.0;
+          decoBox(M.pole, along ? b : a, 0.06, along ? a : b, p0.x, y, p0.z);                          // landing
+          decoBox(M.pole, along ? 0.04 : a, 0.9, along ? a : 0.04, p0.x + (along ? side * 0.48 : 0), y + 0.45, p0.z + (along ? 0 : side * 0.48)); // railing
+          decoBox(M.pole, along ? 0.05 : 0.05, 3.4, 0.05, p0.x, y - 1.5, p0.z, along ? 0.75 : 0, 0, along ? 0 : 0.75);   // stair
+        }
+        void D2;
+      }
+      // awning over a shop door
+      if (opts.awning && F) {
+        const a = F.point(opts.doorA || 0, F.D / 2 + 0.6);
+        const along = F.axis === 'z';
+        decoBox(opts.awningMat || M.fabric, along ? 3.6 : 1.3, 0.08, along ? 1.3 : 3.6, a.x, 3.15, a.z, along ? F.sign * 0.25 : 0, 0, along ? 0 : -F.sign * 0.25);
       }
     }
 
@@ -863,6 +976,7 @@
         const f = pick(M.facades);
         const m = new THREE.Mesh(g, [f, f, M.roof, M.roof, f, f]);
         m.position.set(x, h / 2, z); add(m);
+        decoBox(M.rubble, w + 0.3, 0.6, dd + 0.3, x, h + 0.3, z); decoBox(M.trim, w + 0.5, 0.2, dd + 0.5, x, h - 0.2, z);
       }
     }
     // distant hills silhouette
@@ -1138,6 +1252,7 @@
       W.fixedEvidence.forEach(e => { e.found = false; W.evidence.push(e); });
       if (shadows) W.evGroup.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     };
+    flushDeco();
     W.placeEvidence();
 
     W.spawn = new THREE.Vector3(1.2, 0, -HALF + 6);

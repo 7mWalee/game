@@ -73,6 +73,9 @@
     this.flashOn = false;
     this.cameraUp = false;
     this.hidden = null;
+    this.hideAnim = null;
+    this.hideView = false;
+    ((this.world && this.world.hideSpots) || []).forEach(sp => sp.setOpen && sp.setOpen(0));
     this.hideTime = 0;
     this.rocks = 0;
     (this.projectiles || []).forEach(r => r.mesh.parent && r.mesh.parent.remove(r.mesh));
@@ -161,6 +164,18 @@
     let moving = false, sprinting = false;
     const indoor = W.isIndoor(this.pos);
     this.indoor = indoor;
+
+    // mid-way into or out of a hiding spot: no control until the door shuts
+    if (this.hideAnim) {
+      this.vel.set(0, 0, 0);
+      this.updateHideAnim(dt);
+      this.noiseRadius = this.spike;
+      this.flash.intensity = 0;
+      LO.audio.setFlashlightBuzz(false);
+      this.zoom = 0;
+      return;
+    }
+    this.hideView = !!this.hidden;
 
     if (this.hidden) {
       // locked in place, can only look around a bit
@@ -475,14 +490,56 @@
     return best;
   };
 
+  // ---------- climbing in and out: the door/lid swings open, you move, it closes ----------
+  const HIDE_ANIM = 1.0;
+  const smooth = t => t * t * (3 - 2 * t);
+  function angDiff(a, b) { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; }
+  Player.prototype.startHideAnim = function (spot, dir) {
+    const eyeOut = 1.62;
+    this.hideAnim = {
+      spot, dir, t: 0,
+      fromPos: dir === 'in' ? new V3(this.pos.x, eyeOut, this.pos.z) : spot.pos.clone(),
+      toPos: dir === 'in' ? spot.pos.clone() : new V3(spot.exit.x, eyeOut, spot.exit.z),
+      fromYaw: this.yaw, toYaw: spot.yaw + Math.PI,
+      fromPitch: this.pitch,
+    };
+    LO.audio.hideDoor();
+  };
+  Player.prototype.updateHideAnim = function (dt) {
+    const A = this.hideAnim, sp = A.spot;
+    A.t = Math.min(1, A.t + dt / HIDE_ANIM);
+    const t = A.t;
+    // open (0-35%), hold while you move (35-65%), close (65-100%)
+    const open = t < 0.35 ? smooth(t / 0.35) : t < 0.65 ? 1 : 1 - smooth((t - 0.65) / 0.35);
+    sp.setOpen && sp.setOpen(open);
+    const m = smooth(Math.max(0, Math.min(1, (t - 0.2) / 0.55)));
+    const cam = this.camera;
+    cam.position.lerpVectors(A.fromPos, A.toPos, m);
+    this.yaw = A.fromYaw + angDiff(A.fromYaw, A.toYaw) * m;
+    this.pitch = A.fromPitch * (1 - m);
+    cam.rotation.order = 'YXZ'; cam.rotation.set(this.pitch, this.yaw, 0);
+    this.hideView = A.dir === 'in' ? t > 0.82 : t < 0.18;
+    if (t >= 1) {
+      this.hideAnim = null;
+      sp.setOpen && sp.setOpen(0);
+      LO.audio.click(false);
+      if (A.dir === 'in') {
+        this.hidden = sp;
+        this.onHide && this.onHide();
+      } else {
+        this.pos.set(sp.exit.x, 0, sp.exit.z);
+        this.yaw = sp.yaw + Math.PI;
+        this.spike = Math.max(this.spike, NOISE.hide);
+      }
+    }
+  };
+
   Player.prototype.interact = function () {
+    if (this.hideAnim) return;
     if (this.hidden) {
       const s = this.hidden;
       this.hidden = null;
-      this.pos.copy(s.exit);
-      this.yaw = s.yaw + Math.PI;
-      LO.audio.hideDoor();
-      this.spike = Math.max(this.spike, NOISE.hide);
+      this.startHideAnim(s, 'out');
       return;
     }
     const s = this.nearestHideSpot();
@@ -492,11 +549,9 @@
       return;
     }
     if (s) {
-      this.hidden = s;
-      this.yaw = s.yaw + Math.PI; this.pitch = 0;
       this.flashOn = false;
-      LO.audio.hideDoor();
-      this.onHide && this.onHide();
+      this.cameraUp = false;
+      this.startHideAnim(s, 'in');
     }
   };
 

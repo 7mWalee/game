@@ -783,7 +783,7 @@
     }
     $('prompt').innerHTML = player.prompt;
     $('crosshair').style.display = player.cameraUp ? 'none' : 'block';
-    show('hide-overlay', !!player.hidden);
+    show('hide-overlay', !!player.hideView);
     // the Tenant grows restless the longer you hide
     const tf = Math.min(1, player.hideTime / LO.TENANT_LIMIT);
     if (player.hidden) {
