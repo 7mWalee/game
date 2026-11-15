@@ -167,6 +167,23 @@
   A.stopRinging = function () { if (ringSrc) { try { ringSrc.stop(); } catch (e) {} ringSrc = null; } };
 
   // the wind has stopped: silence music, voices and every sound the world makes
+  // the player is dead: cut every sound that belongs to the living world at once
+  // (panting, flashlight, heartbeat, wind, entities, Siren Head). Death sounds and music are unaffected.
+  A.worldMuted = false;
+  A.silenceWorld = function (on) {
+    if (!ctx) return;
+    A.worldMuted = on;
+    const t = ctx.currentTime;
+    if (on) {
+      heartAmt = 0;
+      [breath && breath.g, buzz && buzz.g, wind && wind.g, wind && wind.wg, tenant && tenant.g, tenant && tenant.og,
+       silent && silent.og, silent && silent.sg, moth && moth.g, expo && expo.g1, expo && expo.g2, worldBus]
+        .forEach(g => { if (g && g.gain) { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(0, t); } });
+    } else if (worldBus && !A.still) {
+      worldBus.gain.cancelScheduledValues(t); worldBus.gain.setTargetAtTime(1, t, 0.3);
+    }
+  };
+
   A.setStillness = function (on) {
     if (A.still === on) return;
     A.still = on;
@@ -281,6 +298,7 @@
   // breathing — called with intensity 0..1 each frame
   let breath = null;
   A.setBreathing = function (amount) {
+    if (A.worldMuted) return;
     if (!ctx) return;
     if (!breath) {
       const n = noiseSrc(false, true);
@@ -304,6 +322,7 @@
   // flashlight hum (the "slight buzzing")
   let buzz = null;
   A.setFlashlightBuzz = function (on, flicker) {
+    if (A.worldMuted) return;
     if (!ctx) return;
     if (!buzz) {
       const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 120;
@@ -381,7 +400,7 @@
 
   // heartbeat — intensity 0..1
   let heartNext = 0, heartAmt = 0;
-  A.setHeartbeat = function (amt) { heartAmt = amt; };
+  A.setHeartbeat = function (amt) { heartAmt = A.worldMuted ? 0 : amt; };
   function heartTick() {
     if (!ctx || heartAmt < 0.05 || A.still) return;
     const t = ctx.currentTime;
@@ -399,6 +418,7 @@
   // ambient wind bed
   let wind = null;
   A.setWind = function (vol, gustAmt, tc) {
+    if (A.worldMuted) return;
     if (!ctx) return;
     if (!wind) {
       const n = noiseSrc(true, true);
@@ -426,6 +446,7 @@
   let moth = null;
   // papery flutter that rises while your light rests on one
   A.setMothFlutter = function (amount) {
+    if (A.worldMuted) return;
     if (!ctx) return;
     if (!moth) {
       const n = noiseSrc(false, true);
@@ -482,6 +503,7 @@
   let expo = null;
   // a lens-whine and detuned hum that grows as it gets closer in the viewfinder
   A.setExposure = function (amount) {
+    if (A.worldMuted) return;
     if (!ctx) return;
     if (!expo) {
       const o1 = ctx.createOscillator(); o1.type = 'sine'; o1.frequency.value = 3200;
@@ -546,6 +568,7 @@
   // ---------- THE TENANT (hiding spot lurker) ----------
   let tenant = null;
   A.setTenant = function (amount) {
+    if (A.worldMuted) return;
     if (!ctx) return;
     if (!tenant) {
       // whispering: band-passed noise with jittery amplitude
@@ -601,6 +624,7 @@
   // ---------- THE SILENT ONE ----------
   let silent = null;
   A.setSilentOne = function (amount) {
+    if (A.worldMuted) return;
     if (!ctx) return;
     if (!silent) {
       // tinnitus ring + a sub-bass pressure you feel more than hear

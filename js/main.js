@@ -386,6 +386,7 @@
   }
 
   function goTitle() {
+    A.silenceWorld(false);
     if (cutscene) endCutscene();
     LO.TVFX.clear();
     A.stopDeathMusic(); A.stopRinging(); clearTimeout(deathTimer);
@@ -463,6 +464,7 @@
   }
 
   function beginPlay() {
+    A.silenceWorld(false);
     A.stopVoices();
     hideAllScreens();
     if (!parkedCar) {
@@ -634,6 +636,7 @@
   };
   // death by damage (the Silent One / the Tenant)
   function dieBy(cause) {
+    if (state === 'play') A.silenceWorld(true);
     if (state !== 'play') return;
     dieCause = cause;
     state = 'dying';
@@ -648,6 +651,7 @@
     A.setMothFlutter(0);
   }
   function onCaught() {
+    if (state === 'play' && !siren.catchDisabled) A.silenceWorld(true);
     if (state !== 'play' || siren.catchDisabled) return;
     dieCause = 'siren';
     state = 'dying';
