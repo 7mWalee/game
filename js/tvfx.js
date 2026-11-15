@@ -72,10 +72,18 @@
     },
     moth(g, s, k) {
       g.fillStyle = 'rgba(10,0,0,0.9)';
-      const f = Math.sin(k * 60) * 0.06;
-      [-1, 1].forEach(d => { g.beginPath(); g.moveTo(0, -s * 0.12); g.lineTo(d * s * (0.45 + f), -s * 0.38); g.lineTo(d * s * (0.52 + f), s * 0.02); g.lineTo(d * s * 0.3, s * 0.3); g.lineTo(0, s * 0.1); g.fill(); });
-      g.beginPath(); g.ellipse(0, -s * 0.28, s * 0.05, s * 0.08, 0, 0, 7); g.fill();
-      g.fillRect(-s * 0.04, -s * 0.2, s * 0.08, s * 0.7);
+      const f = Math.sin(k * 60) * 0.05;
+      [-1, 1].forEach(d => {
+        g.beginPath(); g.moveTo(0, -s * 0.15); g.lineTo(d * s * (0.3 + f), -s * 0.42); g.lineTo(d * s * (0.55 + f), -s * 0.32); g.lineTo(d * s * (0.5 + f), -s * 0.02); g.lineTo(0, -s * 0.05); g.fill();
+        g.beginPath(); g.moveTo(0, -s * 0.02); g.lineTo(d * s * 0.42, s * 0.05); g.lineTo(d * s * 0.3, s * 0.28); g.lineTo(0, s * 0.12); g.fill();
+      });
+      g.fillRect(-s * 0.05, -s * 0.2, s * 0.1, s * 0.75);
+      g.beginPath(); g.ellipse(0, -s * 0.28, s * 0.07, s * 0.08, 0, 0, 7); g.fill();
+      g.strokeStyle = 'rgba(10,0,0,0.9)'; g.lineWidth = s * 0.01;
+      [-1, 1].forEach(d => { g.beginPath(); g.moveTo(d * s * 0.02, -s * 0.34); g.quadraticCurveTo(d * s * 0.08, -s * 0.48, d * s * 0.2, -s * 0.52); g.stroke(); });
+      // glinting compound eyes and pale eyespots
+      g.fillStyle = 'rgba(255,60,40,0.6)';
+      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(d * s * 0.035, -s * 0.28, s * 0.03, s * 0.04, 0, 0, 7); g.fill(); g.beginPath(); g.arc(d * s * 0.36, -s * 0.24, s * 0.04, 0, 7); g.fill(); });
     },
     sneaky(g, s, k) {
       g.fillStyle = 'rgba(255,245,215,0.95)'; g.shadowColor = 'rgba(255,240,200,0.9)'; g.shadowBlur = s * 0.04;

@@ -169,9 +169,10 @@
     if (this.hideAnim) {
       this.vel.set(0, 0, 0);
       this.updateHideAnim(dt);
-      this.noiseRadius = this.spike;
-      this.flash.intensity = 0;
-      LO.audio.setFlashlightBuzz(false);
+      this.noiseRadius = this.spike + (this.flashOn ? NOISE.flashlight : 0);
+      // the light stays on until you're fully inside (it goes off as the door shuts)
+      this.flash.intensity = this.flashOn ? (LO.settings.lighting === 'simple' ? 3 : 8) * Math.min(1, 0.4 + this.battery / 40) : 0;
+      LO.audio.setFlashlightBuzz(this.flashOn);
       this.zoom = 0;
       return;
     }
@@ -524,6 +525,7 @@
       sp.setOpen && sp.setOpen(0);
       LO.audio.click(false);
       if (A.dir === 'in') {
+        this.flashOn = false;
         this.hidden = sp;
         this.onHide && this.onHide();
       } else {
@@ -549,7 +551,6 @@
       return;
     }
     if (s) {
-      this.flashOn = false;
       this.cameraUp = false;
       this.startHideAnim(s, 'in');
     }

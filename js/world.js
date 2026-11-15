@@ -256,6 +256,13 @@
         pillar: B(0.09, 1, 0.09), wind: B(1.5, 1, 0.025), side: B(0.025, 0.42, 1.72),
         bumper: B(2.02, 0.16, 0.22), tail: B(0.58, 0.2, 0.04), tailRim: B(0.66, 0.26, 0.03), plate: B(0.5, 0.16, 0.03),
         grille: B(1.0, 0.2, 0.04), head: B(0.34, 0.17, 0.04), trim: B(0.02, 0.05, 3.6), mirror: B(0.14, 0.1, 0.08),
+        greenhouse: (() => {
+          const sh = new THREE.Shape();
+          [[0.88, 0], [0.47, 0.55], [-1.1, 0.55], [-1.32, 0]].forEach(([zz, yy], i) => i ? sh.lineTo(zz, yy) : sh.moveTo(zz, yy));
+          const g2 = new THREE.ExtrudeGeometry(sh, { depth: 1.54, bevelEnabled: false });
+          g2.rotateY(-Math.PI / 2); g2.translate(0.77, 0, 0);
+          return g2;
+        })(),
         door: B(0.025, 0.4, 1.8), tire: new THREE.CylinderGeometry(0.36, 0.36, 0.24, 14), rim: new THREE.CylinderGeometry(0.21, 0.21, 0.26, 10),
         chrome: mat({ color: 0xa8a8a8, roughness: 0.35, metalness: 0.8 }),
         tailOn: new THREE.MeshBasicMaterial({ color: 0xd01212 }), tailOff: mat({ color: 0x6a0c0c, roughness: 0.4 }),
@@ -287,17 +294,16 @@
       const hood = add(K.hood, paint, 0, 0.86, 1.52); hood.rotation.x = 0.05;
       add(K.trunk, paint, 0, 0.88, -1.72);
       // cabin: roof on pillars, with glass between them
-      const cab = new THREE.Group(); cab.position.y = 0.88; g.add(cab);
-      add(K.roof, paint, 0, 0.55, -0.32, cab);
+      const cab = new THREE.Group(); cab.position.y = 0.83; g.add(cab);
+      add(K.greenhouse, M.glass, 0, 0, 0, cab);                                  // the tinted glass cabin
+      add(K.roof, paint, 0, 0.575, -0.32, cab);
       [-1, 1].forEach(sd => {
-        strut(K.pillar, paint, new V(sd * 0.8, 0, 0.86), new V(sd * 0.76, 0.54, 0.47), cab);    // A
-        strut(K.pillar, paint, new V(sd * 0.79, 0, -0.3), new V(sd * 0.77, 0.54, -0.3), cab);   // B
-        strut(K.pillar, paint, new V(sd * 0.8, 0, -1.3), new V(sd * 0.76, 0.54, -1.1), cab);    // C
-        add(K.side, M.glass, sd * 0.785, 0.28, -0.4, cab);
+        strut(K.pillar, paint, new V(sd * 0.79, 0, 0.88), new V(sd * 0.79, 0.56, 0.47), cab);    // A
+        strut(K.pillar, paint, new V(sd * 0.795, 0, -0.3), new V(sd * 0.795, 0.56, -0.3), cab); // B
+        strut(K.pillar, paint, new V(sd * 0.79, 0, -1.32), new V(sd * 0.79, 0.56, -1.1), cab);  // C
+        add(K.pillar, paint, sd * 0.79, 0.03, -0.22, cab).scale.set(1, 0.06, 23);               // window sill
         const mr = add(K.mirror, paint, sd * 1.0, 0.12, 0.72, cab); void mr;
       });
-      const ws = strut(K.wind, M.glass, new V(0, 0, 0.85), new V(0, 0.54, 0.48), cab); void ws;
-      strut(K.wind, M.glass, new V(0, 0, -1.29), new V(0, 0.54, -1.11), cab);
       // bumpers, lights, plate, grille, trim
       add(K.bumper, K.chrome, 0, 0.36, 2.24); add(K.bumper, K.chrome, 0, 0.36, -2.24);
       [-1, 1].forEach(sd => {
@@ -564,39 +570,47 @@
       const placeAlong = (b0, b1, side) => {
         let b = b0 + 0.5;
         while (b < b1 - 1.2) {
-          const len = R(1.2, 2.4);
+          const len = R(1.3, 2.3);
           if (b + len > b1 - 0.5) break;
           const roll = rand();
-          const a = side * (hl - t - 0.5);
+          const a = side * (hl - t);
           const p = F.point(a, b + len / 2);
-          const ry = axis === 'z' ? 0 : Math.PI / 2;
-          if (roll < 0.35) {          // shelf
-            box(0.6, R(1.6, 2.2), len, kind === 'shop' ? M.metal : M.wood, p.x, 1, p.z, { ry, collide: true, tile: 2 });
-          } else if (roll < 0.6) {    // table / desk
-            const d = box(1.0, 0.08, len, M.wood, p.x, 0.8, p.z, { ry, collide: true });
-            void d;
-            if (kind === 'office' || kind === 'police') {
-              const mon = box(0.5, 0.35, 0.1, M.dark, p.x, 1.05, p.z, { ry: ry + Math.PI / 2 });
-              void mon;
-            }
-          } else if (roll < 0.8) {    // couch / bed / crates
-            box(1.0, 0.6, len, kind === 'house' ? M.fabric : M.wood, p.x, 0.3, p.z, { ry, collide: true });
-          } else {                    // knocked over cabinet
-            box(0.6, 0.6, len, M.locker, p.x, 0.3, p.z, { ry: ry + R(-0.3, 0.3), collide: true });
-          }
-          b += len + R(0.3, 1.2);
+          const into = axis === 'z' ? (side > 0 ? Math.PI : 0) : (side > 0 ? Math.PI / 2 : -Math.PI / 2);
+          let item;
+          if (kind === 'shop') item = roll < 0.75 ? 'shopShelf' : 'counter';
+          else if (kind === 'house') item = roll < 0.25 ? 'couch' : roll < 0.45 ? 'bed' : roll < 0.65 ? 'bookshelf' : roll < 0.85 ? 'dresser' : 'desk';
+          else item = roll < 0.45 ? 'desk' : roll < 0.75 ? 'bookshelf' : 'dresser';
+          furniture(item, p.x, p.z, into, len, kind);
+          b += len + R(0.3, 1.0);
         }
       };
       placeAlong(pb + 0.3, hd - t - 1.2, -1);
       placeAlong(pb + 0.3, hd - t - 1.2, 1);
       placeAlong(-hd + t, pb - 0.3, -1);
       placeAlong(-hd + t, pb - 0.3, 1);
-      // shop aisles
+      // shop aisles: double-sided shelving units
       if (kind === 'shop' && L > 12) {
         [-2.4, 2.4].forEach(a => {
           const p = F.point(a + gapA * 0.2, (pb + hd) / 2 + 0.3);
-          box(axis === 'z' ? 0.7 : 2.6, 1.5, axis === 'z' ? 2.6 : 0.7, M.metal, p.x, 0.75, p.z, { collide: true });
+          furniture('aisle', p.x, p.z, axis === 'z' ? 0 : Math.PI / 2, 2.6, kind);
         });
+      }
+      // a rug, a ceiling light per room, and pictures on the walls
+      {
+        const rp = F.point(gapA * 0.3, (pb + hd) / 2);
+        decoBox(pick(RUGS), axis === 'z' ? 2.6 : 3.4, 0.02, axis === 'z' ? 3.4 : 2.6, rp.x, 0.15, rp.z);
+        [(pb + hd) / 2, (pb - hd) / 2].forEach(bb => {
+          const lp = F.point(0, bb);
+          decoCyl(M.pole, 0.02, 0.02, 0.5, lp.x, ceil - 0.25, lp.z, 6);
+          decoCyl(M.lampOff, 0.32, 0.18, 0.18, lp.x, ceil - 0.55, lp.z, 12);
+        });
+        for (let i = 0; i < 2; i++) {
+          const sd = rand() < 0.5 ? -1 : 1, bb = R(-hd + 2, hd - 2.5);
+          const pp = F.point(sd * (hl - t - 0.03), bb);
+          const yaw = F.yawLeft() + (sd > 0 ? Math.PI : 0);
+          decoBox(M.wood, 0.75, 0.6, 0.04, pp.x, 1.75, pp.z, 0, yaw, 0);
+          decoBox(pick(PAINTINGS), 0.62, 0.47, 0.05, pp.x, 1.75, pp.z, 0, yaw, 0);
+        }
       }
       // a locker against the back wall (hiding spot)
       {
@@ -624,7 +638,7 @@
 
       const info = { F, hl, hd, t, pb, gapA, axis, sign, kind, sheriff: !!(opts && opts.sheriff), cx, cz };
       W.enterables.push(info);
-      decorate(fx0, fx1, fz0, fz1, H, F, { awning: kind === 'shop' || kind === 'office', awningMat: kind === 'shop' ? mat({ color: 0x5a1f1a }) : mat({ color: 0x1f3a5a }) });
+      decorate(fx0, fx1, fz0, fz1, H, F, { doorGap: true, doorA: 0, awning: kind === 'shop' || kind === 'office', awningMat: kind === 'shop' ? mat({ color: 0x5a1f1a }) : mat({ color: 0x1f3a5a }) });
 
       if (info.sheriff) {
         // SHERIFF sign above the door
@@ -634,8 +648,8 @@
         g.strokeStyle = '#c9a227'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
         g.fillStyle = '#e8d9a0'; g.font = 'bold 76px Arial'; g.textAlign = 'center'; g.fillText('SHERIFF', 256, 92);
         const sm = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(c) }));
-        const sp = F.point(0, hd + 0.04);
-        sm.position.set(sp.x, doorH + 0.9, sp.z); sm.rotation.y = F.yawFront();
+        const sp = F.point(0, hd + 0.16);          // in front of the floor band
+        sm.position.set(sp.x, doorH + 1.35, sp.z); sm.rotation.y = F.yawFront();
         add(sm, { cast: false });
         // evidence room: a desk with an old TV and the tape
         const da = gapA > 0 ? -hl + t + 2.0 : hl - t - 2.0;
@@ -772,9 +786,28 @@
       decoBox(M.rubble, w + 0.3, ph, P, cx, H + ph / 2, z1 - P / 2 + 0.15);
       decoBox(M.rubble, P, ph, d, x0 + P / 2 - 0.15, H + ph / 2, cz);
       decoBox(M.rubble, P, ph, d, x1 - P / 2 + 0.15, H + ph / 2, cz);
-      decoBox(M.trim, w + 0.55, 0.22, d + 0.55, cx, H - 0.25, cz);                                   // cornice
-      for (let y = 3.6; y < H - 1.5; y += 3.2) decoBox(M.trim, w + 0.16, 0.12, d + 0.16, cx, y, cz);    // floor bands
-      decoBox(M.trim, w + 0.14, 0.55, d + 0.14, cx, 0.27, cz);                                          // plinth
+      // bands are thin strips on the OUTSIDE of the walls only (never solid slabs through the building)
+      const ring = (y, h, p, doorGap) => {
+        const front = F ? (F.axis === 'z' ? (F.sign > 0 ? 'z1' : 'z0') : (F.sign > 0 ? 'x1' : 'x0')) : null;
+        const da = opts.doorA || 0, gap = 1.35;
+        const strip = (face, lo, hi) => {     // lo/hi: lateral range along that face
+          if (hi - lo < 0.05) return;
+          const mid = (lo + hi) / 2, len = hi - lo;
+          if (face === 'z0' || face === 'z1') decoBox(M.trim, len, h, p, mid, y, face === 'z0' ? z0 - p / 2 : z1 + p / 2);
+          else decoBox(M.trim, p, h, len, face === 'x0' ? x0 - p / 2 : x1 + p / 2, y, mid);
+        };
+        ['z0', 'z1', 'x0', 'x1'].forEach(face => {
+          const along = face[0] === 'z';
+          const lo = along ? x0 - p : z0, hi = along ? x1 + p : z1;
+          if (doorGap && face === front) {
+            const c = (along ? cx : cz) + da;           // door centre along this face (lateral a maps onto it)
+            strip(face, lo, c - gap); strip(face, c + gap, hi);
+          } else strip(face, lo, hi);
+        });
+      };
+      ring(H - 0.25, 0.22, 0.28, false);                                   // cornice
+      for (let y = 3.6; y < H - 1.5; y += 3.2) ring(y, 0.12, 0.08, false); // floor bands
+      ring(0.27, 0.55, 0.07, !!opts.doorGap);                              // plinth (gap at the door)
       // rooftop clutter
       const r = rand();
       if (r < 0.45) {   // water tank on stilts
@@ -805,6 +838,106 @@
         const along = F.axis === 'z';
         decoBox(opts.awningMat || M.fabric, along ? 3.6 : 1.3, 0.08, along ? 1.3 : 3.6, a.x, 3.15, a.z, along ? F.sign * 0.25 : 0, 0, along ? 0 : -F.sign * 0.25);
       }
+    }
+
+    // ---------- furniture (local: +x into the room from the wall, z along it) ----------
+    const RUGS = [0x5a2a22, 0x2a3a52, 0x4a4a2a, 0x3a2a3a].map(c => mat({ color: c, roughness: 1 }));
+    const PAINTINGS = [0x6a5a3a, 0x2a4a5a, 0x5a3a3a, 0x3a5a3a].map(c => mat({ color: c, roughness: 0.9 }));
+    const BOOKS = [0x6a2020, 0x20406a, 0x2a5a2a, 0x7a6a3a, 0x3a2a4a, 0x8a8070].map(c => mat({ color: c }));
+    const FABRICS = [0x4a3a32, 0x2f3a4a, 0x4a2f2f, 0x3a4a3a].map(c => mat({ color: c, roughness: 1 }));
+    const LINEN = mat({ color: 0xcfcab8, roughness: 1 });
+    const PRODUCTS = [0xc8b040, 0xb03030, 0x3060a0, 0x40a050, 0xd0d0c0, 0x8a5a30].map(c => mat({ color: c, roughness: 0.6 }));
+    function furniture(type, x, z, yaw, len, kind) {
+      const g = new THREE.Group();
+      const P = (w, h, d, m, px, py, pz, rx, ry, rz) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); o.rotation.set(rx || 0, ry || 0, rz || 0); g.add(o); return o; };
+      const C = (rt, rb, h, m, px, py, pz) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 8), m); o.position.set(px, py, pz); g.add(o); return o; };
+      const fy = 0.14;  // floor height inside
+      if (type === 'bookshelf') {
+        const H2 = R(1.8, 2.2), D2 = 0.38;
+        P(0.03, H2, len, M.wood, 0.015, fy + H2 / 2, 0);
+        [-1, 1].forEach(sd => P(D2, H2, 0.04, M.wood, D2 / 2, fy + H2 / 2, sd * (len / 2 - 0.02)));
+        P(D2, 0.04, len, M.wood, D2 / 2, fy + H2, 0);
+        for (let sh = 0; sh < 5; sh++) {
+          const y = fy + 0.06 + sh * (H2 - 0.1) / 4.6;
+          P(D2, 0.03, len - 0.08, M.wood, D2 / 2, y, 0);
+          if (sh < 4) {
+            let zz = -len / 2 + 0.08;
+            while (zz < len / 2 - 0.12) {
+              const bw = R(0.03, 0.07), bh = R(0.2, 0.3);
+              if (rand() < 0.85) P(R(0.18, 0.26), bh, bw, pick(BOOKS), 0.16, y + bh / 2 + 0.015, zz + bw / 2, 0, 0, rand() < 0.08 ? 0.3 : 0);
+              zz += bw + 0.005;
+              if (rand() < 0.04) zz += R(0.1, 0.3);
+            }
+          }
+        }
+      } else if (type === 'desk') {
+        const top = 0.76;
+        P(0.75, 0.04, len, M.wood, 0.4, fy + top, 0);
+        [[0.08, -1], [0.72, -1]].forEach(([xx]) => P(0.05, top, 0.05, M.wood, xx, fy + top / 2, -len / 2 + 0.06));
+        P(0.62, top - 0.02, 0.45, M.wood, 0.4, fy + top / 2, len / 2 - 0.26);              // drawer unit
+        for (let i = 0; i < 3; i++) { P(0.02, 0.18, 0.4, M.wood, 0.72, fy + 0.15 + i * 0.22, len / 2 - 0.26); P(0.03, 0.02, 0.1, M.pole, 0.74, fy + 0.15 + i * 0.22, len / 2 - 0.26); }
+        if (kind === 'office' || kind === 'police') {
+          P(0.06, 0.32, 0.48, M.dark, 0.22, fy + top + 0.22, -0.1); P(0.12, 0.02, 0.18, M.dark, 0.25, fy + top + 0.03, -0.1);
+          P(0.16, 0.02, 0.42, M.dark, 0.5, fy + top + 0.03, -0.1);
+        } else { P(0.25, 0.03, 0.32, LINEN, 0.35, fy + top + 0.03, R(-0.3, 0.3), 0, R(-0.4, 0.4), 0); }
+        // a chair, pushed back
+        const cx = 1.05, cz = R(-len / 4, len / 4) - 0.1, cm = pick(FABRICS);
+        P(0.45, 0.06, 0.45, cm, cx, fy + 0.46, cz); P(0.06, 0.5, 0.45, cm, cx + 0.22, fy + 0.74, cz);
+        [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(([a, c]) => P(0.04, 0.44, 0.04, M.pole, cx + a, fy + 0.22, cz + c));
+      } else if (type === 'couch') {
+        const cm = pick(FABRICS);
+        P(0.9, 0.38, len, cm, 0.45, fy + 0.19, 0);
+        P(0.25, 0.5, len, cm, 0.12, fy + 0.58, 0);
+        [-1, 1].forEach(sd => P(0.9, 0.55, 0.18, cm, 0.45, fy + 0.27, sd * (len / 2 - 0.09)));
+        const n = len > 1.8 ? 3 : 2;
+        for (let i = 0; i < n; i++) P(0.62, 0.12, (len - 0.4) / n - 0.03, cm, 0.55, fy + 0.44, -len / 2 + 0.2 + (i + 0.5) * (len - 0.4) / n);
+      } else if (type === 'bed') {
+        len = Math.max(2.0, len);
+        P(1.35, 0.3, len, M.wood, 0.7, fy + 0.15, 0);
+        P(1.3, 0.2, len - 0.1, LINEN, 0.7, fy + 0.4, 0);
+        P(1.35, 0.9, 0.06, M.wood, 0.7, fy + 0.45, -len / 2 + 0.03);                      // headboard
+        P(0.5, 0.1, 0.32, LINEN, 0.7, fy + 0.55, -len / 2 + 0.28);
+        P(1.32, 0.06, len * 0.6, pick(FABRICS), 0.7, fy + 0.52, len * 0.18, 0, 0, R(-0.05, 0.05));
+      } else if (type === 'dresser') {
+        const H2 = R(0.85, 1.2), w2 = Math.min(len, 1.4);
+        P(0.5, H2, w2, M.wood, 0.26, fy + H2 / 2, 0);
+        const rows = Math.round(H2 / 0.3);
+        for (let i = 0; i < rows; i++) {
+          const y = fy + 0.15 + i * (H2 - 0.1) / rows;
+          P(0.02, (H2 - 0.1) / rows - 0.04, w2 - 0.08, M.trim, 0.52, y + 0.02, 0);
+          P(0.03, 0.03, 0.14, M.pole, 0.54, y + 0.04, 0);
+        }
+        if (rand() < 0.6) C(0.08, 0.1, 0.3, M.lampOff, 0.25, fy + H2 + 0.15, w2 / 3);
+      } else if (type === 'shopShelf' || type === 'aisle') {
+        const D2 = type === 'aisle' ? 0.7 : 0.45, H2 = 1.7, ox = type === 'aisle' ? 0 : D2 / 2;
+        [-1, 1].forEach(sd => P(D2, H2, 0.04, M.metal, ox, fy + H2 / 2, sd * (len / 2 - 0.02)));
+        P(0.03, H2, len, M.metal, ox, fy + H2 / 2, 0);
+        for (let sh = 0; sh < 4; sh++) {
+          const y = fy + 0.12 + sh * 0.48;
+          P(D2, 0.03, len - 0.08, M.metal, ox, y, 0);
+          let zz = -len / 2 + 0.1;
+          while (zz < len / 2 - 0.15) {
+            const pm = pick(PRODUCTS), ph = R(0.15, 0.3);
+            if (rand() < 0.75) { if (rand() < 0.5) P(D2 * 0.6, ph, 0.14, pm, ox, y + ph / 2 + 0.015, zz); else C(0.05, 0.05, ph, pm, ox + R(-0.1, 0.1), y + ph / 2 + 0.015, zz); }
+            zz += R(0.14, 0.24);
+          }
+        }
+      } else if (type === 'counter') {
+        P(0.7, 1.0, len, M.wood, 0.4, fy + 0.5, 0);
+        P(0.8, 0.05, len + 0.06, M.trim, 0.42, fy + 1.02, 0);
+        P(0.35, 0.22, 0.4, M.dark, 0.4, fy + 1.15, R(-len / 4, len / 4));                // till
+      }
+      g.position.set(x, 0, z); g.rotation.y = yaw;
+      g.updateMatrixWorld(true);
+      const bb = new THREE.Box3().setFromObject(g);
+      g.traverse(o => {
+        if (!o.isMesh) return;
+        const geo = o.geometry.clone().applyMatrix4(o.matrixWorld);
+        if (!DECO.has(o.material)) DECO.set(o.material, []);
+        DECO.get(o.material).push(geo.index ? geo.toNonIndexed() : geo);
+        o.geometry.dispose();
+      });
+      collider(bb.min.x, bb.max.x, bb.min.z, bb.max.z, bb.max.y);
     }
 
     // ---------- forced special lots ----------
@@ -1174,7 +1307,7 @@
         if (r() < 0.5) {
           const b = takeFront();
           let a = (r() - 0.5) * (b.L - 8); if (Math.abs(a - b.doorA) < 3) a = b.doorA + (a < b.doorA ? -3 : 3);
-          const p = b.F.point(a, b.D / 2 + 0.03), y = Math.min(4.4, b.H * 0.5);
+          const p = b.F.point(a, b.D / 2 + 0.12), y = Math.min(4.4, b.H * 0.5);
           const cm = new THREE.Mesh(new THREE.PlaneGeometry(7, Math.min(8, b.H * 0.85)), decalMat(clawTex));
           cm.position.set(p.x, y, p.z); cm.rotation.y = b.F.yawFront(); W.evGroup.add(cm);
           W.evidence.push({ id: 'claws', name: 'Giant claw marks', pos: new THREE.Vector3(p.x, y, p.z), maxDist: 22, found: false });
@@ -1195,7 +1328,7 @@
         } else {
           const b = takeFront();
           let a = (r() - 0.5) * (b.L - 7); if (Math.abs(a - b.doorA) < 3) a = b.doorA + (a < b.doorA ? -3 : 3);
-          const p = b.F.point(a, b.D / 2 + 0.03);
+          const p = b.F.point(a, b.D / 2 + 0.12);
           const pm = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), decalMat(sprayTex));
           pm.position.set(p.x, 2.4, p.z); pm.rotation.y = b.F.yawFront(); W.evGroup.add(pm);
           W.evidence.push({ id: 'warning', name: 'Survivor\'s warning', pos: new THREE.Vector3(p.x, 2.4, p.z), maxDist: 16, found: false });

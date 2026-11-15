@@ -28,7 +28,7 @@
       "Don't go completely silent for too long",
     ] },
     moth: { name: 'THE MOTHS', label: 'PHENOMENON-250', tips: [
-      'Pale faceless figures with ragged wings',
+      'Pale, furry moth-people with big black eyes',
       'Stand still in dark corners, only seen in flashlight',
       'Shriek if your light rests on them too long',
       'Keep your beam moving, never stare',
@@ -114,33 +114,32 @@
     },
     moth(g, w, h) {
       const cx = w / 2;
-      // wings behind
-      pencil(g, [[cx, h * 0.3], [cx - 90, h * 0.18], [cx - 110, h * 0.42], [cx - 60, h * 0.62], [cx, h * 0.45]], 2, 4, true);
-      pencil(g, [[cx, h * 0.3], [cx + 90, h * 0.18], [cx + 110, h * 0.42], [cx + 60, h * 0.62], [cx, h * 0.45]], 2, 4, true);
-      hatch(g, cx - 100, h * 0.22, cx - 20, h * 0.55, 50, 2.2);
-      hatch(g, cx + 20, h * 0.22, cx + 100, h * 0.55, 50, 0.9);
-      ellipse(g, cx, h * 0.17, 14, 22, 3);
-      pencil(g, [[cx - 16, h * 0.26], [cx + 16, h * 0.26], [cx + 10, h * 0.55], [cx - 10, h * 0.55]], 3, 3, true);
-      pencil(g, [[cx - 7, h * 0.55], [cx - 9, h * 0.93]], 3); pencil(g, [[cx + 7, h * 0.55], [cx + 9, h * 0.93]], 3);
-      // flashlight beam pointing at it
-      g.save(); g.setLineDash([6, 6]);
-      pencil(g, [[w * 0.02, h * 0.95], [cx - 30, h * 0.3]], 1); pencil(g, [[w * 0.02, h * 0.95], [cx + 30, h * 0.5]], 1);
+      // four wings with veins and eyespots
+      [-1, 1].forEach(sd => {
+        pencil(g, [[cx, h * 0.27], [cx + sd * 70, h * 0.12], [cx + sd * 175, h * 0.15], [cx + sd * 205, h * 0.3], [cx + sd * 150, h * 0.42], [cx, h * 0.36]], 2, 4, true);
+        pencil(g, [[cx, h * 0.37], [cx + sd * 120, h * 0.42], [cx + sd * 150, h * 0.56], [cx + sd * 85, h * 0.64], [cx, h * 0.47]], 2, 4, true);
+        for (let i = 0; i < 4; i++) pencil(g, [[cx + sd * 10, h * 0.3], [cx + sd * (60 + i * 40), h * (0.16 + i * 0.06)]], 1, 2);
+        ellipse(g, cx + sd * 140, h * 0.27, 18, 16, 2); ellipse(g, cx + sd * 140, h * 0.27, 7, 6, 2);
+        ellipse(g, cx + sd * 95, h * 0.52, 12, 11, 2);
+        hatch(g, cx + (sd > 0 ? 60 : -190), h * 0.17, cx + (sd > 0 ? 190 : -60), h * 0.4, 35, sd > 0 ? 0.9 : 2.2);
+      });
+      // furry body and abdomen
+      pencil(g, [[cx - 22, h * 0.25], [cx + 22, h * 0.25], [cx + 18, h * 0.45], [cx - 18, h * 0.45]], 3, 3, true);
+      for (let i = 0; i < 26; i++) { const x = cx + (Math.random() - 0.5) * 44, y = h * (0.24 + Math.random() * 0.03); pencil(g, [[x, y], [x + (Math.random() - 0.5) * 8, y - 10]], 1, 1.5); }
+      ellipse(g, cx, h * 0.53, 15, 34, 3);
+      [0.5, 0.55, 0.6].forEach(y => pencil(g, [[cx - 13, h * y], [cx + 13, h * y]], 1, 1.5));
+      // long thin legs and arms
+      pencil(g, [[cx - 8, h * 0.62], [cx - 12, h * 0.8], [cx - 10, h * 0.97]], 3); pencil(g, [[cx + 8, h * 0.62], [cx + 12, h * 0.8], [cx + 10, h * 0.97]], 3);
+      pencil(g, [[cx - 22, h * 0.27], [cx - 34, h * 0.48], [cx - 30, h * 0.66]], 2); pencil(g, [[cx + 22, h * 0.27], [cx + 34, h * 0.48], [cx + 30, h * 0.66]], 2);
+      // head: big black compound eyes, feathery antennae
+      ellipse(g, cx, h * 0.2, 20, 22, 3);
+      g.save(); g.fillStyle = '#151515';
+      [-1, 1].forEach(sd => { g.beginPath(); g.ellipse(cx + sd * 11, h * 0.195, 9, 12, 0, 0, 7); g.fill(); });
       g.restore();
-    },
-    sneaky(g, w, h) {
-      const cx = w / 2;
-      // just two eyes and a grin far too wide, outlined in pencil
-      g.save(); g.fillStyle = '#f7f3e6'; g.strokeStyle = 'rgba(25,25,25,0.95)'; g.lineWidth = 4;
-      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(cx + d * 48, h * 0.25, 27, 13, 0, 0, 7); g.stroke(); });
-      g.beginPath(); g.moveTo(cx - 106, h * 0.36); g.quadraticCurveTo(cx, h * 0.565, cx + 106, h * 0.36); g.quadraticCurveTo(cx, h * 0.47, cx - 106, h * 0.36); g.stroke();
-      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(cx + d * 48, h * 0.25, 26, 12, 0, 0, 7); g.fill(); });
-      g.beginPath(); g.moveTo(cx - 105, h * 0.36); g.quadraticCurveTo(cx, h * 0.56, cx + 105, h * 0.36); g.quadraticCurveTo(cx, h * 0.47, cx - 105, h * 0.36); g.fill();
-      g.strokeStyle = '#333'; g.lineWidth = 2;
-      for (let i = 1; i < 12; i++) { const x = cx - 100 + i * 16.6; g.beginPath(); g.moveTo(x, h * 0.37 + Math.sin(i / 12 * Math.PI) * h * 0.06); g.lineTo(x, h * 0.41 + Math.sin(i / 12 * Math.PI) * h * 0.08); g.stroke(); }
-      g.restore();
-      // a little figure looking the wrong way
-      pencil(g, [[cx - 150, h * 0.9], [cx - 150, h * 0.7]], 3); ellipse(g, cx - 150, h * 0.66, 14, 16, 3);
-      g.save(); g.font = `30px ${HAND}`; g.fillStyle = '#333'; g.fillText('behind you', cx - 40, h * 0.86); g.restore();
+      [-1, 1].forEach(sd => {
+        pencil(g, [[cx + sd * 6, h * 0.165], [cx + sd * 25, h * 0.09], [cx + sd * 55, h * 0.06]], 2, 1.5);
+        for (let i = 1; i < 7; i++) { const x = cx + sd * (6 + i * 7), y = h * (0.165 - i * 0.015); pencil(g, [[x, y], [x + sd * 4, y - 9]], 1, 1); }
+      });
     },
     exposure(g, w, h) {
       // a viewfinder with a blurred figure inside
@@ -227,12 +226,18 @@
       g.restore();
       const lit = Math.abs(sweep) < 0.25;
       if (lit) {
-        g.fillStyle = '#d8d4c8';
-        g.beginPath(); g.ellipse(mx, H * 0.3, 7, 10, 0, 0, 7); g.fill();
+        // patterned wings with eyespots
+        [-1, 1].forEach(sd => {
+          g.fillStyle = 'rgba(160,145,120,0.9)';
+          g.beginPath(); g.moveTo(mx, H * 0.36); g.lineTo(mx + sd * 34, H * 0.26); g.lineTo(mx + sd * 40, H * 0.4); g.lineTo(mx + sd * 22, H * 0.56); g.fill();
+          g.fillStyle = '#2a1c14'; g.beginPath(); g.arc(mx + sd * 26, H * 0.36, 4, 0, 7); g.fill();
+        });
+        g.fillStyle = '#d8d0c0';
         g.fillRect(mx - 6, H * 0.35, 12, H * 0.38);
-        g.fillStyle = 'rgba(190,184,166,0.8)';
-        g.beginPath(); g.moveTo(mx, H * 0.38); g.lineTo(mx - 30, H * 0.3); g.lineTo(mx - 20, H * 0.55); g.fill();
-        g.beginPath(); g.moveTo(mx, H * 0.38); g.lineTo(mx + 30, H * 0.3); g.lineTo(mx + 20, H * 0.55); g.fill();
+        g.beginPath(); g.ellipse(mx, H * 0.3, 7, 9, 0, 0, 7); g.fill();
+        g.fillStyle = '#0c0808'; [-1, 1].forEach(sd => { g.beginPath(); g.ellipse(mx + sd * 3.5, H * 0.3, 3, 4, 0, 0, 7); g.fill(); });
+        g.strokeStyle = '#d8d0c0'; g.lineWidth = 1.5;
+        [-1, 1].forEach(sd => { g.beginPath(); g.moveTo(mx + sd * 2, H * 0.27); g.quadraticCurveTo(mx + sd * 8, H * 0.19, mx + sd * 16, H * 0.18); g.stroke(); });
       }
       caption(g, W, H, 'KEEP THE BEAM MOVING — NEVER STARE');
     },
