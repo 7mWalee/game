@@ -129,9 +129,10 @@
     },
     sneaky(g, w, h) {
       const cx = w / 2;
-      // the head: mostly darkness, two eyes and a grin far too wide
-      g.save(); g.fillStyle = 'rgba(30,30,30,0.85)'; g.beginPath(); g.ellipse(cx, h * 0.32, 120, 140, 0, 0, 7); g.fill(); g.restore();
-      g.save(); g.fillStyle = '#f4f0e0';
+      // just two eyes and a grin far too wide, outlined in pencil
+      g.save(); g.fillStyle = '#f7f3e6'; g.strokeStyle = 'rgba(25,25,25,0.95)'; g.lineWidth = 4;
+      [-1, 1].forEach(d => { g.beginPath(); g.ellipse(cx + d * 48, h * 0.25, 27, 13, 0, 0, 7); g.stroke(); });
+      g.beginPath(); g.moveTo(cx - 106, h * 0.36); g.quadraticCurveTo(cx, h * 0.565, cx + 106, h * 0.36); g.quadraticCurveTo(cx, h * 0.47, cx - 106, h * 0.36); g.stroke();
       [-1, 1].forEach(d => { g.beginPath(); g.ellipse(cx + d * 48, h * 0.25, 26, 12, 0, 0, 7); g.fill(); });
       g.beginPath(); g.moveTo(cx - 105, h * 0.36); g.quadraticCurveTo(cx, h * 0.56, cx + 105, h * 0.36); g.quadraticCurveTo(cx, h * 0.47, cx - 105, h * 0.36); g.fill();
       g.strokeStyle = '#333'; g.lineWidth = 2;

@@ -78,7 +78,6 @@
       g.fillRect(-s * 0.04, -s * 0.2, s * 0.08, s * 0.7);
     },
     sneaky(g, s, k) {
-      g.fillStyle = 'rgba(10,0,0,0.9)'; g.beginPath(); g.ellipse(0, -s * 0.05, s * 0.32, s * 0.4, 0, 0, 7); g.fill();
       g.fillStyle = 'rgba(255,245,215,0.95)'; g.shadowColor = 'rgba(255,240,200,0.9)'; g.shadowBlur = s * 0.04;
       [-1, 1].forEach(d => { g.beginPath(); g.ellipse(d * s * 0.12, -s * 0.13, s * 0.06, s * 0.026, 0, 0, 7); g.fill(); });
       g.beginPath(); g.moveTo(-s * 0.27, s * 0.02); g.quadraticCurveTo(0, s * 0.3, s * 0.27, s * 0.02); g.quadraticCurveTo(0, s * 0.16, -s * 0.27, s * 0.02); g.fill();

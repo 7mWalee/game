@@ -27,13 +27,7 @@
 
   Sneaky.prototype.build = function () {
     const R = this.root;
-    const shadow = new THREE.MeshBasicMaterial({ color: 0x020202 });
-    // a tall, barely-there shape: you mostly see the eyes and the grin
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 1.7, 10), shadow);
-    body.position.y = 0.95; R.add(body);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 16, 12), shadow);
-    head.scale.set(1.05, 1.15, 0.9); head.position.y = 1.95; R.add(head);
-    this.head = head;
+    // nothing but two glowing eyes and a far too wide smile, floating in the dark
     const glow = new THREE.MeshBasicMaterial({ color: 0xfff6c8 });
     this.eyes = [-1, 1].map(s => {
       const e = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), glow);
@@ -52,8 +46,14 @@
       tooth.rotation.z = Math.PI;
       R.add(tooth);
     }
+    // bigger, and the grin stretched extra wide
+    R.children.forEach(o => {
+      const wide = o.geometry && o.geometry.type !== 'SphereGeometry' ? 1.35 : 1;
+      o.position.x *= 1.7 * wide; o.position.y = 1.95 + (o.position.y - 1.95) * 1.7;
+      o.scale.multiplyScalar(1.7); o.scale.x *= wide;
+    });
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.world.glowTex('rgba(255,240,190,0.35)'), depthWrite: false, transparent: true }));
-    halo.scale.set(0.9, 0.5, 1); halo.position.set(0, 2.0, 0.3); R.add(halo);
+    halo.scale.set(1.8, 1.0, 1); halo.position.set(0, 1.97, 0.3); R.add(halo);
   };
 
   Sneaky.prototype.reset = function () {
