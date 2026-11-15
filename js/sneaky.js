@@ -11,6 +11,9 @@
   const MIN_T = 30, MAX_T = 180, WINDOW = 2.5;
   const FACE_COS = Math.cos(THREE.MathUtils.degToRad(55));   // how directly you must face it
   LO.SNEAKY = { WINDOW };
+  // TESTING ONLY: open the game with ?sneakytest in the URL and it always comes after 20 seconds
+  const TEST = /[?&]sneakytest\b/.test(location.search);
+  const nextTime = () => TEST ? 20 : MIN_T + Math.random() * (MAX_T - MIN_T);
 
   function Sneaky(scene, world) {
     this.scene = scene; this.world = world;
@@ -54,7 +57,7 @@
   };
 
   Sneaky.prototype.reset = function () {
-    this.timer = MIN_T + Math.random() * (MAX_T - MIN_T);
+    this.timer = nextTime();
     this.attacking = false;
     this.t = 0;
     this.root.visible = false;
@@ -69,7 +72,7 @@
       // it won't come while Siren Head is close enough to hear the flashlight
       const hearFlash = LO.NOISE.flashlight * 1.3 * (player.indoor ? 0.6 : 1);
       const sirenNear = siren && siren.distToPlayer !== undefined && siren.distToPlayer < hearFlash + 4;
-      if (sirenNear || player.hidden) return;
+      if ((sirenNear || player.hidden) && !TEST) return;
       this.timer -= dt;
       if (this.timer > 0) return;
       // creep up right behind you
@@ -107,6 +110,6 @@
     player.flickerForce = false;
     if (this.breath) { this.breath.stop(); this.breath = null; }
     if (seen) LO.audio.staticBurst(null, 0.35, 0.35);
-    this.timer = MIN_T + Math.random() * (MAX_T - MIN_T);
+    this.timer = nextTime();
   };
 })();
